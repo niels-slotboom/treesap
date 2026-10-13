@@ -34,14 +34,14 @@ concept RHSConcept = std::is_trivially_copyable_v<F> &&
                          typename std::integral_constant<int, F::ngrow>;
                      } &&
                      requires(const F& f,
-                              int i,                         ///< 1. Grid cell index in X direction
-                              int j,                         ///< 2. Grid cell index in Y direction
-                              int k,                         ///< 3. Grid cell index in Z direction
-                              int comp,                      ///< 4. Component index
-                              amrex::Real time,              ///< 5. Current simulation time
-                              amrex::Array4<amrex::Real> arr ///< 6. Data array view buffer
+                              int i,                                      ///< 1. Grid cell index in X direction
+                              int j,                                      ///< 2. Grid cell index in Y direction
+                              int k,                                      ///< 3. Grid cell index in Z direction
+                              int comp,                                   ///< 4. Component index
+                              amrex::Real time,                           ///< 5. Current simulation time
+                              const amrex::Array4<const amrex::Real>& arr ///< 6. Data array view buffer
                      ) {
-                         { f(i, j, k, comp, arr) } -> std::convertible_to<amrex::Real>;
+                         { f(i, j, k, comp, time, arr) } -> std::convertible_to<amrex::Real>;
                      };
 
 /**
