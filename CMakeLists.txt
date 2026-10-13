@@ -42,5 +42,5 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(amrex)
 
-# add_subdirectory(src/treesap)
+add_subdirectory(src/treesap)
 add_subdirectory(src/test)
