@@ -5,9 +5,6 @@
 #include "../PDEModelConcepts.hpp"
 
 template <int ncomp_, int ngrow_> struct NoOpRHS {
-    static_assert(ncomp_ > 0);
-    static_assert(ngrow_ >= 0);
-
     static constexpr int ncomp = ncomp_;
     static constexpr int ngrow = ngrow_;
 

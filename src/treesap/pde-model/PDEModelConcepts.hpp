@@ -13,7 +13,11 @@
  * @tparam F Type to check against the concept.
  */
 template <typename F>
-concept InitConcept = std::copy_constructible<F> && requires { typename std::integral_constant<int, F::ncomp>; } &&
+concept InitConcept = std::copy_constructible<F> &&
+                      requires {
+                          typename std::integral_constant<int, F::ncomp>;
+                          requires F::ncomp > 0;
+                      } &&
                       requires(const F& f,
                                amrex::Real x, ///< 1. Physical coordinate in X direction
                                amrex::Real y, ///< 2. Physical coordinate in Y direction
@@ -32,6 +36,8 @@ concept RHSConcept = std::is_trivially_copyable_v<F> &&
                      requires {
                          typename std::integral_constant<int, F::ncomp>;
                          typename std::integral_constant<int, F::ngrow>;
+                         requires F::ncomp > 0;
+                         requires F::ngrow >= 0;
                      } &&
                      requires(const F& f,
                               int i,                                      ///< 1. Grid cell index in X direction
@@ -53,6 +59,8 @@ concept BCConcept = std::is_trivially_copyable_v<F> &&
                     requires {
                         typename std::integral_constant<int, F::ncomp>;
                         typename std::integral_constant<int, F::ngrow>;
+                        requires F::ncomp > 0;
+                        requires F::ngrow >= 0;
                     } &&
                     requires(const F& t,
                              const amrex::IntVect& iv,               ///< 1. Grid cell index (i, j, k) being filled
@@ -76,6 +84,8 @@ template <typename M>
 concept PDEModelConcept = requires {
     typename std::integral_constant<int, M::ncomp>;
     typename std::integral_constant<int, M::ngrow>;
+    requires M::ncomp > 0;
+    requires M::ngrow >= 0;
     typename M::init_t;
     typename M::rhs_t;
     typename M::bc_t;
