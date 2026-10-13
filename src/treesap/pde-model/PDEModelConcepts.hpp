@@ -13,7 +13,7 @@
  * @tparam F Type to check against the concept.
  */
 template <typename F>
-concept InitConcept = std::copy_constructible<F> &&
+concept InitConcept = std::is_copy_constructible_v<F> &&
                       requires {
                           typename std::integral_constant<int, F::ncomp>;
                           requires F::ncomp > 0;
