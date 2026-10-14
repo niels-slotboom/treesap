@@ -18,7 +18,7 @@ concept ABLProfileConcept = std::is_trivially_copyable_v<F> && requires(F f, amr
 };
 
 /**
- * @brief Decorates a right-hand side model to add absorbing boundary layer damping.
+ * @brief Decorates a right-hand side model to add absorbing boundary layer (ABL) damping.
  * @tparam RHSType Underlying right-hand side model type.
  * @tparam ABLProfileType Profile function type.
  */

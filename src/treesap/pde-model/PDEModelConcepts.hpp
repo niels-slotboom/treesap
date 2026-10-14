@@ -9,25 +9,6 @@
 #include <type_traits>
 
 /**
- * @brief Verifies that a type provides valid initial condition evaluation.
- * @tparam F Type to check against the concept.
- */
-template <typename F>
-concept InitConcept = std::is_copy_constructible_v<F> &&
-                      requires {
-                          typename std::integral_constant<int, F::ncomp>;
-                          requires F::ncomp > 0;
-                      } &&
-                      requires(const F& f,
-                               amrex::Real x, ///< 1. Physical coordinate in X direction
-                               amrex::Real y, ///< 2. Physical coordinate in Y direction
-                               amrex::Real z, ///< 3. Physical coordinate in Z direction
-                               int comp       ///< 4. Component index to evaluate
-                      ) {
-                          { f(x, y, z, comp) } -> std::convertible_to<amrex::Real>;
-                      };
-
-/**
  * @brief Verifies that a type evaluates the spatial right-hand side operator.
  * @tparam F Type to check against the concept.
  */
@@ -77,6 +58,25 @@ concept BCConcept = std::is_trivially_copyable_v<F> &&
                     };
 
 /**
+ * @brief Verifies that a type provides valid initial condition evaluation.
+ * @tparam F Type to check against the concept.
+ */
+template <typename F>
+concept InitConcept = std::is_copy_constructible_v<F> &&
+                      requires {
+                          typename std::integral_constant<int, F::ncomp>;
+                          requires F::ncomp > 0;
+                      } &&
+                      requires(const F& f,
+                               amrex::Real x, ///< 1. Physical coordinate in X direction
+                               amrex::Real y, ///< 2. Physical coordinate in Y direction
+                               amrex::Real z, ///< 3. Physical coordinate in Z direction
+                               int comp       ///< 4. Component index to evaluate
+                      ) {
+                          { f(x, y, z, comp) } -> std::convertible_to<amrex::Real>;
+                      };
+
+/**
  * @brief Verifies that a type encapsulates a complete partial differential equation model.
  * @tparam M Type to check against the concept.
  */
@@ -86,18 +86,18 @@ concept PDEModelConcept = requires {
     typename std::integral_constant<int, M::ngrow>;
     requires M::ncomp > 0;
     requires M::ngrow >= 0;
-    typename M::init_t;
     typename M::rhs_t;
+    typename M::init_t;
     typename M::bc_t;
-} && requires(const M& m) {
+} && requires(M m) {
     requires RHSConcept<typename M::rhs_t>;
-    { m.get_rhs() } -> RHSConcept;
-
-    requires BCConcept<typename M::bc_t>;
-    { m.get_bc() } -> BCConcept;
+    { m.get_rhs() } -> std::same_as<const typename M::rhs_t&>;
 
     requires InitConcept<typename M::init_t>;
-    { m.get_init() } -> InitConcept;
+    { m.get_init() } -> std::same_as<const typename M::init_t&>;
+
+    requires BCConcept<typename M::bc_t>;
+    { m.get_bc() } -> std::same_as<const typename M::bc_t&>;
 
     { m.geom() } -> std::same_as<const amrex::Geometry&>;
 };
