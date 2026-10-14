@@ -39,9 +39,9 @@ struct KODecorator {
         return rhs(i, j, k, comp, time, arr) + dx_inv * strength * ko_term;
     }
 
+    RHSType rhs;          ///< Original right-hand side model to be decorated.
     amrex::Real strength; ///< Dissipation strength factor.
     amrex::Real dx_inv;   ///< Inverse grid spacing (1 / dx).
-    RHSType rhs;          ///< Original right-hand side model to be decorated.
 };
 
 // Verify that KODecorator satisfies the right-hand side concept.
