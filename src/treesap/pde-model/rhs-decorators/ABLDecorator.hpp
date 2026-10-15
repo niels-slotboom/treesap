@@ -31,6 +31,20 @@ struct ABLDecorator {
     /// Number of ghost cells.
     static constexpr int ngrow = RHSType::ngrow;
 
+    struct ABLData {
+        ABLData(amrex::GpuArray<amrex::Real, ncomp> target_values_, int thickness_, amrex::Real max_strength_,
+                ABLProfileType profile_)
+            : target_values(std::move(target_values_)), thickness(thickness_),
+              inv_thickness(1.0 / static_cast<amrex::Real>(thickness_)), max_strength(max_strength_),
+              profile(std::move(profile_)) {}
+
+        ABLProfileType profile; ///< Profile of damping strength (s = 0 at interface, s = 1 at boundary).
+        int thickness;
+        amrex::Real inv_thickness;                         ///< Inverse layer thickness (1 / thickness).
+        amrex::Real max_strength;                          ///< Maximum damping strength.
+        amrex::GpuArray<amrex::Real, ncomp> target_values; ///< Target values for field damping.
+    };
+
     /**
      * @brief Initializes the absorbing boundary layer decorator.
      * @param rhs Underlying right-hand side model.
@@ -40,15 +54,12 @@ struct ABLDecorator {
      * @param max_strength Maximum damping strength.
      * @param target_values Target field values for damping.
      */
-    ABLDecorator(RHSType rhs, ABLProfileType profile, const amrex::Geometry& geom, int thickness,
-                 amrex::Real max_strength, amrex::GpuArray<amrex::Real, ncomp> target_values)
-        : rhs(std::move(rhs)), profile(std::move(profile)), bulk([&]() {
+    ABLDecorator(RHSType rhs, const amrex::Geometry& geom, ABLData data_)
+        : rhs(std::move(rhs)), data(std::move(data_)), bulk([&]() {
               auto b = geom.Domain();
-              b.grow(-thickness);
+              b.grow(-data.thickness);
               return b;
-          }),
-          inv_thickness(1.0 / static_cast<amrex::Real>(thickness)), target_values(std::move(target_values)),
-          max_strength(max_strength) {}
+          }) {}
 
     /**
      * @brief Evaluates the decorated right-hand side with added boundary damping.
@@ -62,7 +73,7 @@ struct ABLDecorator {
      */
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real operator()(int i, int j, int k, int comp, amrex::Real time,
                                                                     const amrex::Array4<const amrex::Real>& arr) const {
-        return rhs(i, j, k, comp, time, arr) - sigma(i, j, k) * (arr(i, j, k, comp) - target_values[comp]);
+        return rhs(i, j, k, comp, time, arr) - sigma(i, j, k) * (arr(i, j, k, comp) - data.target_values[comp]);
     }
 
     /**
@@ -84,16 +95,13 @@ struct ABLDecorator {
         amrex::Real dist_z = std::max(bulk.smallEnd(dir::z) - k, k - bulk.bigEnd(dir::z)) - 0.5;
 
         amrex::Real scaled_dist =
-            amrex::Clamp(inv_thickness * std::sqrt(dist_x * dist_x + dist_y * dist_y + dist_z * dist_z), 0.0, 1.0);
-        return max_strength * profile(scaled_dist);
+            amrex::Clamp(data.inv_thickness * std::sqrt(dist_x * dist_x + dist_y * dist_y + dist_z * dist_z), 0.0, 1.0);
+        return data.max_strength * data.profile(scaled_dist);
     }
 
-    RHSType rhs;               ///< Underlying right-hand side model.
-    ABLProfileType profile;    ///< Profile of damping strength (s = 0 at interface, s = 1 at boundary).
-    amrex::Box bulk;           ///< Inner simulation domain box without damping layer.
-    amrex::Real inv_thickness; ///< Inverse layer thickness (1 / thickness).
-    amrex::GpuArray<amrex::Real, ncomp> target_values; ///< Target values for field damping.
-    amrex::Real max_strength;                          ///< Maximum damping strength.
+    RHSType rhs;     ///< Underlying right-hand side model.
+    amrex::Box bulk; ///< Inner simulation domain box without damping layer.
+    ABLData data;
 };
 
 // Verify that ABLDecorator satisfies the right-hand side concept.
