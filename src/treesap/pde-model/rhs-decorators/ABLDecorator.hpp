@@ -59,7 +59,7 @@ struct ABLDecorator {
               auto b = geom.Domain();
               b.grow(-data.thickness);
               return b;
-          }) {}
+          }()) {}
 
     /**
      * @brief Evaluates the decorated right-hand side with added boundary damping.
