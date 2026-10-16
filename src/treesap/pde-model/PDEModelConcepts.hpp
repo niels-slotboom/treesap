@@ -98,6 +98,7 @@ concept PDEModelConcept = requires {
 
     requires BCConcept<typename M::bc_t>;
     { m.get_bc() } -> std::same_as<const typename M::bc_t&>;
+    { m.get_bc_recs() } -> std::convertible_to<const amrex::Vector<amrex::BCRec>&>;
 
     { m.get_geometry() } -> std::same_as<const amrex::Geometry&>;
 

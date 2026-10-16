@@ -1,5 +1,6 @@
 #pragma once
 
+#include "AMReX_BCRec.H"
 #include "PDEModelConcepts.hpp"
 #include "bcs/NoOpBC.hpp"
 #include "init/ConstInit.hpp"
@@ -47,9 +48,9 @@ class PDEModel {
      * @param bc Boundary condition object.
      */
     PDEModel(amrex::Vector<std::string> comp_names, amrex::Geometry geom, RHSType rhs, InitType init,
-             BCType bc = BCType{})
+             BCType bc = BCType{}, amrex::Vector<amrex::BCRec> bc_recs = amrex::Vector<amrex::BCRec>{})
         : comp_names(std::move(comp_names)), geom(std::move(geom)), rhs(std::move(rhs)), init(std::move(init)),
-          bc(std::move(bc)) {}
+          bc(std::move(bc)), bc_recs(std::move(bc_recs)) {}
 
     /**
      * @brief Get the right-hand side object.
@@ -70,6 +71,12 @@ class PDEModel {
     const BCType& get_bc() const { return bc; }
 
     /**
+     * @brief Get the boundary condition records.
+     * @return Reference to the boundary condition records.
+     */
+    const amrex::Vector<amrex::BCRec>& get_bc_recs() const { return bc_recs; }
+
+    /**
      * @brief Get the domain geometry.
      * @return Reference to the domain geometry.
      */
@@ -82,9 +89,10 @@ class PDEModel {
     const auto& get_comp_names() const { return comp_names; }
 
   protected:
-    RHSType rhs;   ///< Right-hand side object.
-    InitType init; ///< Initial condition object.
-    BCType bc;     ///< Boundary condition object.
+    RHSType rhs;                         ///< Right-hand side object.
+    InitType init;                       ///< Initial condition object.
+    BCType bc;                           ///< Boundary condition object.
+    amrex::Vector<amrex::BCRec> bc_recs; ///< Boundary condition records.
 
     amrex::Geometry geom;                  ///< Domain geometry.
     amrex::Vector<std::string> comp_names; ///< Names of the components.
