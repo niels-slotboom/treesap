@@ -99,9 +99,9 @@ struct ABLDecorator {
         return data.max_strength * data.profile(scaled_dist);
     }
 
-    RHSType rhs;     ///< Underlying right-hand side model.
-    amrex::Box bulk; ///< Inner simulation domain box without damping layer.
+    RHSType rhs; ///< Underlying right-hand side model.
     ABLData data;
+    amrex::Box bulk; ///< Inner simulation domain box without damping layer.
 };
 
 // Verify that ABLDecorator satisfies the right-hand side concept.
