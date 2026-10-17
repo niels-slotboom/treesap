@@ -7,40 +7,49 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 
-set(CMAKE_BUILD_TYPE Release)
-
 # Global C++ Standard
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# CUDA Architecture Configuration
-set(CMAKE_CUDA_ARCHITECTURES 89 CACHE STRING "" FORCE)
-set(AMReX_CUDA_ARCH 8.9 CACHE STRING "" FORCE)
-
-# AMReX Configuration Options
+# Always enforce 3D space dimension requirement
 set(AMReX_SPACEDIM 3 CACHE STRING "AMReX Space Dimension" FORCE)
-set(AMReX_CUDA ON CACHE BOOL "Enable CUDA in AMReX" FORCE)
-set(AMReX_GPU_BACKEND CUDA CACHE STRING "AMReX GPU Backend" FORCE)
-set(AMReX_ENABLE_TESTS OFF CACHE BOOL "Disable AMReX Tests" FORCE)
-set(AMReX_SETUP_COMPILER_FLAGS OFF CACHE BOOL "Disable internal AMReX compiler flag setup" FORCE)
 
-# -!!!- CRITICAL: Prevent CMake from injecting fatbinary rules globally
-# This is necessary because CMake is too stupid to use fatbin correctly 
-# if not using an nvcc + xcomp split compilation setup
-set(CMAKE_CUDA_SEPARABLE_COMPILATION OFF)
-set(CMAKE_CUDA_RESOLVE_DEVICE_SYMBOLS OFF)
-set(AMReX_CUDA_RDC OFF CACHE BOOL "Disable RDC for pure Clang toolchain" FORCE)
+# Conditional configuration and fetching if AMReX is not provided by a parent project
+if(NOT TARGET amrex)
+    # CUDA Architecture Configuration
+    set(CMAKE_CUDA_ARCHITECTURES 89 CACHE STRING "" FORCE)
+    set(AMReX_CUDA_ARCH 8.9 CACHE STRING "" FORCE)
 
-# Fetch AMReX
-include(FetchContent)
-FetchContent_Declare(
-    amrex
-    GIT_REPOSITORY https://github.com/AMReX-Codes/amrex.git
-    GIT_TAG        development
-)
+    # AMReX Configuration Options
+    set(AMReX_CUDA ON CACHE BOOL "Enable CUDA in AMReX" FORCE)
+    set(AMReX_GPU_BACKEND CUDA CACHE STRING "AMReX GPU Backend" FORCE)
+    set(AMReX_ENABLE_TESTS OFF CACHE BOOL "Disable AMReX Tests" FORCE)
+    set(AMReX_SETUP_COMPILER_FLAGS OFF CACHE BOOL "Disable internal AMReX compiler flag setup" FORCE)
 
-FetchContent_MakeAvailable(amrex)
+    # -!!!- CRITICAL: Prevent CMake from injecting fatbinary rules globally
+    # This is necessary because CMake is too stupid to use fatbin correctly 
+    # if not using an nvcc + xcomp split compilation setup
+    set(CMAKE_CUDA_SEPARABLE_COMPILATION OFF)
+    set(CMAKE_CUDA_RESOLVE_DEVICE_SYMBOLS OFF)
+    set(AMReX_CUDA_RDC OFF CACHE BOOL "Disable RDC for pure Clang toolchain" FORCE)
+
+    # Fetch AMReX
+    include(FetchContent)
+    FetchContent_Declare(
+        amrex
+        GIT_REPOSITORY https://github.com/AMReX-Codes/amrex.git
+        GIT_TAG        development
+    )
+
+    FetchContent_MakeAvailable(amrex)
+else()
+    if(NOT AMReX_SPACEDIM EQUAL 3)
+        message(FATAL_ERROR "TrEESaP requires AMReX to be configured with AMReX_SPACEDIM=3, but found ${AMReX_SPACEDIM}")
+    endif()
+endif()
 
 add_subdirectory(src/treesap)
-add_subdirectory(src/test)
+if(PROJECT_IS_TOP_LEVEL)
+    add_subdirectory(src/test)
+endif()
