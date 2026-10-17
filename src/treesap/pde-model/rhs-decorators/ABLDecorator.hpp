@@ -86,16 +86,21 @@ struct ABLDecorator {
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real sigma(int i, int j, int k) const {
         using namespace stencil;
 
-        if (bulk.contains(i, j, k)) // return 0 if we are inside the bulk
+        amrex::IntVect idx{i, j, k};
+
+        if (bulk.contains(idx)) // return 0 if we are inside the bulk
             return 0.0;
 
         // if not in the bulk, compute distance to bulk
-        amrex::Real dist_x = std::max(bulk.smallEnd(dir::x) - i, i - bulk.bigEnd(dir::x)) - 0.5;
-        amrex::Real dist_y = std::max(bulk.smallEnd(dir::y) - j, j - bulk.bigEnd(dir::y)) - 0.5;
-        amrex::Real dist_z = std::max(bulk.smallEnd(dir::z) - k, k - bulk.bigEnd(dir::z)) - 0.5;
+        amrex::IntVect nearest_in_bulk = {amrex::Clamp(idx[dir::x], bulk.smallEnd(dir::x), bulk.bigEnd(dir::x)),
+                                          amrex::Clamp(idx[dir::y], bulk.smallEnd(dir::y), bulk.bigEnd(dir::y)),
+                                          amrex::Clamp(idx[dir::z], bulk.smallEnd(dir::z), bulk.bigEnd(dir::z))};
+        amrex::IntVect connecting_vector = idx - nearest_in_bulk;
+        amrex::Real norm = std::sqrt(connecting_vector[dir::x] * connecting_vector[dir::x] +
+                                     connecting_vector[dir::y] * connecting_vector[dir::y] +
+                                     connecting_vector[dir::z] * connecting_vector[dir::z]);
 
-        amrex::Real scaled_dist =
-            amrex::Clamp(data.inv_thickness * std::sqrt(dist_x * dist_x + dist_y * dist_y + dist_z * dist_z), 0.0, 1.0);
+        amrex::Real scaled_dist = amrex::Clamp(data.inv_thickness * norm, 0.0, 1.0);
         return data.max_strength * data.profile(scaled_dist);
     }
 

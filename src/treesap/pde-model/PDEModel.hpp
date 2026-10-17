@@ -1,6 +1,8 @@
 #pragma once
 
 #include "AMReX_BCRec.H"
+#include "AMReX_BC_TYPES.H"
+
 #include "PDEModelConcepts.hpp"
 #include "bcs/NoOpBC.hpp"
 #include "init/ConstInit.hpp"
@@ -48,7 +50,11 @@ class PDEModel {
      * @param bc Boundary condition object.
      */
     PDEModel(amrex::Vector<std::string> comp_names, amrex::Geometry geom, RHSType rhs, InitType init,
-             BCType bc = BCType{}, amrex::Vector<amrex::BCRec> bc_recs = amrex::Vector<amrex::BCRec>{})
+             BCType bc = BCType{},
+             amrex::Vector<amrex::BCRec> bc_recs = amrex::Vector<amrex::BCRec>(
+                 ncomp,
+                 amrex::BCRec(AMREX_D_DECL(amrex::BCType::int_dir, amrex::BCType::int_dir, amrex::BCType::int_dir),
+                              AMREX_D_DECL(amrex::BCType::int_dir, amrex::BCType::int_dir, amrex::BCType::int_dir))))
         : comp_names(std::move(comp_names)), geom(std::move(geom)), rhs(std::move(rhs)), init(std::move(init)),
           bc(std::move(bc)), bc_recs(std::move(bc_recs)) {}
 

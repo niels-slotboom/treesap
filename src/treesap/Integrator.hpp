@@ -19,6 +19,7 @@
 template <typename PDEModelType>
     requires PDEModelConcept<PDEModelType>
 class Integrator {
+  protected:
     static constexpr int ncomp = PDEModelType::ncomp;
     static constexpr int ngrow = PDEModelType::ngrow;
 
