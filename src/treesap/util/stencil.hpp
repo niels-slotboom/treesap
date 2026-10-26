@@ -7,6 +7,8 @@
 #include <cstdint>
 #include <utility>
 
+namespace tsap {
+
 /**
  * Defines compile-time resolved derivative stencils (up to third derivatives, arbitrary stencil width).
  * Note: It is assumed that dx = dy = dz, and multiplication of results by 1/dx^k with k the derivative order is UP TO
@@ -363,3 +365,5 @@ isotropic_kreiss_oliger<0>(int i, int j, int k, int comp, const amrex::Array4<co
     return arr(i, j, k, comp);
 }
 }; // namespace stencil
+
+} // namespace tsap

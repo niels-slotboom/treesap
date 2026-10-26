@@ -15,8 +15,8 @@
  * @return Configured ABLPDEModel instance.
  */
 inline auto create_abl_test_model(const amrex::Geometry& geom) {
-    using RHSType = NoOpRHS<1, 1>;
-    using InitType = ConstInit<1>;
+    using RHSType = tsap::NoOpRHS<1, 1>;
+    using InitType = tsap::ConstInit<1>;
 
     RHSType rhs{};
     InitType init{0.0}; // Initialize field to zero everywhere
@@ -25,13 +25,13 @@ inline auto create_abl_test_model(const amrex::Geometry& geom) {
         return s * s * (3.0 - 2.0 * s); // Cubic smoothstep profile
     };
 
-    using DecoratedRHS = ABLDecorator<RHSType, decltype(profile)>;
+    using DecoratedRHS = tsap::ABLDecorator<RHSType, decltype(profile)>;
     typename DecoratedRHS::ABLData abl_data{amrex::GpuArray<amrex::Real, 1>{1.0}, // Target value set to 1.0
                                             16,                                   // Thickness in cells
                                             10.0,                                 // Maximum damping strength
                                             profile};
 
-    return ABLPDEModel<RHSType, InitType, decltype(profile)>({"phi"}, geom, rhs, abl_data, init);
+    return tsap::ABLPDEModel<RHSType, InitType, decltype(profile)>({"phi"}, geom, rhs, abl_data, init);
 }
 
 /**
@@ -41,7 +41,7 @@ inline auto create_abl_test_model(const amrex::Geometry& geom) {
 template <int ngrow> inline auto create_wave_eqn_abl_test_model(const amrex::Geometry& geom) {
     using RHSType = WaveEqnRHS<ngrow>;
     constexpr int ncomp = RHSType::ncomp;
-    using InitType = FunctionInit<ncomp>;
+    using InitType = tsap::FunctionInit<ncomp>;
 
     // phi expression (initial position)
     std::string phi_expr = "exp(-((x - (-0.4))^2 + y^2 + z^2) / 0.045) * cos(80.42478 * (x - (-0.4)))";
@@ -59,13 +59,13 @@ template <int ngrow> inline auto create_wave_eqn_abl_test_model(const amrex::Geo
         return s * s * s * (10.0 - 15 * s + 6 * s * s); // Cubic smoothstep profile
     };
 
-    using DecoratedRHS = ABLDecorator<RHSType, decltype(profile)>;
+    using DecoratedRHS = tsap::ABLDecorator<RHSType, decltype(profile)>;
     typename DecoratedRHS::ABLData abl_data{amrex::GpuArray<amrex::Real, ncomp>{0.0, 0.0},
                                             64,       // Thickness in cells
                                             0.3 / dx, // Maximum damping strength
                                             profile};
 
-    return ABLPDEModel<RHSType, InitType, decltype(profile)>({"phi", "pi"}, geom, rhs, abl_data, init);
+    return tsap::ABLPDEModel<RHSType, InitType, decltype(profile)>({"phi", "pi"}, geom, rhs, abl_data, init);
 }
 
 int main(int argc, char** argv) {
@@ -77,7 +77,7 @@ int main(int argc, char** argv) {
 
         auto model = create_wave_eqn_abl_test_model<2>(geom);
 
-        RK4Integrator<decltype(model)> integrator(std::move(model), {128, 128, 128});
+        tsap::RK4Integrator<decltype(model)> integrator(std::move(model), {128, 128, 128});
 
         integrator.initialise();
 

@@ -7,6 +7,8 @@
 #include <string>
 #include <utility>
 
+namespace tsap {
+
 /**
  * @brief Initializes components using string expressions parsed at run time.
  * @tparam ncomp_ Number of components to initialize.
@@ -55,3 +57,5 @@ template <int ncomp_> struct FunctionInit {
 
 // Verify that FunctionInit satisfies the initialization concept.
 static_assert(InitConcept<FunctionInit<1>>);
+
+} // namespace tsap

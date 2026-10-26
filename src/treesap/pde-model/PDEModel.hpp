@@ -8,6 +8,8 @@
 #include "init/ConstInit.hpp"
 #include "rhs-decorators/NoOpRHS.hpp"
 
+namespace tsap {
+
 /**
  * @brief Hold the components that define a partial differential equation model.
  * @tparam RHSType Right-hand side model type.
@@ -105,3 +107,5 @@ class PDEModel {
 };
 
 static_assert(PDEModelConcept<PDEModel<NoOpRHS<1, 1>, ConstInit<1>>>);
+
+} // namespace tsap

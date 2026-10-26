@@ -4,6 +4,8 @@
 #include "../PDEModelConcepts.hpp"
 #include "NoOpRHS.hpp"
 
+namespace tsap {
+
 /**
  * @brief Add Kreiss-Oliger dissipation to a right-hand side model.
  * @tparam RHSType Underlying right-hand side model type.
@@ -53,3 +55,5 @@ struct KODecorator {
 
 // Verify that KODecorator satisfies the right-hand side concept.
 static_assert(RHSConcept<KODecorator<NoOpRHS<1, 1>>>);
+
+} // namespace tsap

@@ -1,6 +1,8 @@
 #pragma once
 #include "../PDEModelConcepts.hpp"
 
+namespace tsap {
+
 /**
  * @brief Implements (constant) Dirichlet boundary conditions.
  * @tparam ncomp_ Number of components.
@@ -55,3 +57,5 @@ template <int ncomp_, int ngrow_> struct DirichletBC {
 
 // Verify that DirichletBC satisfies the boundary condition concept.
 static_assert(BCConcept<DirichletBC<1, 1>>);
+
+} // namespace tsap

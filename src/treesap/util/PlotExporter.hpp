@@ -6,6 +6,9 @@
 #include <AMReX_PlotFileUtil.H>
 
 #include <filesystem>
+
+namespace tsap {
+
 namespace fs = std::filesystem;
 
 /**
@@ -43,3 +46,5 @@ class PlotExporter {
     fs::path path;                                ///< Base file path for export.
     int export_interval;                          ///< Step interval for export execution.
 };
+
+} // namespace tsap

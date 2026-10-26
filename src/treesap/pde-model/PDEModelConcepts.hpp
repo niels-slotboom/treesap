@@ -8,6 +8,8 @@
 #include <concepts>
 #include <type_traits>
 
+namespace tsap {
+
 /**
  * @brief Verifies that a type evaluates the spatial right-hand side operator.
  * @tparam F Type to check against the concept.
@@ -104,3 +106,5 @@ concept PDEModelConcept = requires {
 
     { m.get_comp_names() } -> std::convertible_to<amrex::Vector<std::string>>;
 };
+
+} // namespace tsap

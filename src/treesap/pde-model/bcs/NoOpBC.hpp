@@ -1,6 +1,8 @@
 #pragma once
 #include "../PDEModelConcepts.hpp"
 
+namespace tsap {
+
 /**
  * @brief Implements an empty boundary condition.
  * @tparam ncomp_ Number of components.
@@ -35,3 +37,5 @@ template <int ncomp_, int ngrow_> struct NoOpBC {
 
 // Verify that NoOpBC satisfies the boundary condition concept.
 static_assert(BCConcept<NoOpBC<1, 1>>);
+
+} // namespace tsap

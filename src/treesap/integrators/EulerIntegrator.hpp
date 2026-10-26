@@ -3,6 +3,8 @@
 #include "AMReX_MFIter.H"
 #include "Integrator.hpp"
 
+namespace tsap {
+
 /**
  * @brief Implement the Euler time integration scheme.
  * @tparam PDEModelType Type of the PDE model.
@@ -51,3 +53,5 @@ class EulerIntegrator : public Integrator<PDEModelType> {
         }
     }
 };
+
+}; // namespace tsap

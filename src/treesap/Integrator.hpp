@@ -12,6 +12,8 @@
 #include <AMReX_MultiFab.H>
 #include <AMReX_PhysBCFunct.H>
 
+namespace tsap {
+
 /**
  * @brief Manage time integration for a PDE model.
  * @tparam PDEModelType Type of the PDE model.
@@ -142,3 +144,5 @@ class Integrator {
   private:
     std::optional<PlotExporter> exporter = std::nullopt; ///< Exporter instance.
 };
+
+} // namespace tsap

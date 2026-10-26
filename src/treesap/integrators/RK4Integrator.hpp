@@ -2,6 +2,8 @@
 #include "AMReX_MFIter.H"
 #include "Integrator.hpp"
 
+namespace tsap {
+
 /**
  * @brief Implements the Runge-Kutta 4 time integration scheme.
  * @tparam PDEModelType Type of the PDE model.
@@ -113,3 +115,5 @@ class RK4Integrator : public Integrator<PDEModelType> {
     amrex::MultiFab arg;      ///< Temporary container for current stage argument.
     amrex::MultiFab arg_next; ///< Temporary container for next stage argument.
 };
+
+} // namespace tsap

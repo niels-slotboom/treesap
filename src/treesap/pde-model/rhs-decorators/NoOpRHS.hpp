@@ -1,9 +1,9 @@
 #pragma once
-
-// empty example implementation of an RHS, used to test decorator implementations
-
 #include "../PDEModelConcepts.hpp"
 
+namespace tsap {
+
+// empty example implementation of an RHS, used to test decorator implementations
 template <int ncomp_, int ngrow_> struct NoOpRHS {
     static constexpr int ncomp = ncomp_;
     static constexpr int ngrow = ngrow_;
@@ -15,3 +15,5 @@ template <int ncomp_, int ngrow_> struct NoOpRHS {
 };
 
 static_assert(RHSConcept<NoOpRHS<1, 1>>);
+
+} // namespace tsap

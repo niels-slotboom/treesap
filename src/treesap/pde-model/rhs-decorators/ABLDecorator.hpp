@@ -4,6 +4,8 @@
 #include "../PDEModelConcepts.hpp"
 #include "NoOpRHS.hpp"
 
+namespace tsap {
+
 /**
  * @brief Verifies that a profile type is trivially copyable, accepts a real value,
  *        and evaluates to zero at 0.0 (bulk interface) and one at 1.0 (domain boundary).
@@ -111,3 +113,5 @@ struct ABLDecorator {
 
 // Verify that ABLDecorator satisfies the right-hand side concept.
 static_assert(RHSConcept<ABLDecorator<NoOpRHS<1, 1>, decltype([](amrex::Real x) constexpr { return x; })>>);
+
+} // namespace tsap
