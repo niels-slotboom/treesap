@@ -1,4 +1,5 @@
 #pragma once
+#include "AMReX_REAL.H"
 #include <AMReX.H>
 #include <AMReX_Array.H>
 #include <AMReX_Array4.H>
@@ -340,4 +341,26 @@ AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE amrex::Real kreiss_oliger(int i, int j,
     }
     return result * norm;
 }
+
+// Recursive template for Delta^ngrow, the isotropic version of Kreiss-Oliger dissipation
+template <int ngrow>
+AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE amrex::Real
+isotropic_kreiss_oliger(int i, int j, int k, int comp, const amrex::Array4<const amrex::Real>& arr) {
+    static_assert(ngrow > 0); // prevent this from being used for non-positive ngrow
+    amrex::Real x_pair = isotropic_kreiss_oliger<ngrow - 1>(i + 1, j, k, comp, arr) +
+                         isotropic_kreiss_oliger<ngrow - 1>(i - 1, j, k, comp, arr);
+    amrex::Real y_pair = isotropic_kreiss_oliger<ngrow - 1>(i, j + 1, k, comp, arr) +
+                         isotropic_kreiss_oliger<ngrow - 1>(i, j - 1, k, comp, arr);
+    amrex::Real z_pair = isotropic_kreiss_oliger<ngrow - 1>(i, j, k + 1, comp, arr) +
+                         isotropic_kreiss_oliger<ngrow - 1>(i, j, k - 1, comp, arr);
+    return x_pair + y_pair + z_pair - 6 * isotropic_kreiss_oliger<ngrow - 1>(i, j, k, comp, arr);
+}
+
+// Base case for Delta^0 = Id
+template <>
+AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE amrex::Real
+isotropic_kreiss_oliger<0>(int i, int j, int k, int comp, const amrex::Array4<const amrex::Real>& arr) {
+    return arr(i, j, k, comp);
+}
+
 }; // namespace stencil
