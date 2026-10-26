@@ -78,8 +78,7 @@ where:
 
 * $\Delta x^{-1}$ is the inverse grid spacing (`dx_inv`).
 
-* $D_{\text{KO}}^{(d)}$ represents the Kreiss-Oliger dissipation difference operator applied along spatial dimension $d$, utilizing the configured ghost cell width (`ngrow`) for stencil evaluation.
-
+* $D_{\text{KO}}^{(d)}$ represents the Kreiss-Oliger dissipation difference operator applied along spatial dimension $d$, utilizing the configured ghost cell width (`ngrow`) for stencil evaluation. If the template parameter `isotropic == false`, this is the sum of the `2 * ngrow` derivatives in each direction. If `isotropic == true`, this is $\Delta^r$ where $r = $`ngrow`. The sign is always such that the spectrum is non-positive.
 ---
 ### `ABLPDEModel.hpp`
 

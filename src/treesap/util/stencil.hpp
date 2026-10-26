@@ -362,5 +362,4 @@ AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE amrex::Real
 isotropic_kreiss_oliger<0>(int i, int j, int k, int comp, const amrex::Array4<const amrex::Real>& arr) {
     return arr(i, j, k, comp);
 }
-
 }; // namespace stencil
