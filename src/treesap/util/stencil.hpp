@@ -7,7 +7,7 @@
 #include <cstdint>
 #include <utility>
 
-namespace tsap {
+namespace treesap {
 
 /**
  * Defines compile-time resolved derivative stencils (up to third derivatives, arbitrary stencil width).
@@ -366,4 +366,4 @@ isotropic_kreiss_oliger<0>(int i, int j, int k, int comp, const amrex::Array4<co
 }
 }; // namespace stencil
 
-} // namespace tsap
+} // namespace treesap

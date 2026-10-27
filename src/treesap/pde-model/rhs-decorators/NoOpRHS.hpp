@@ -1,7 +1,7 @@
 #pragma once
 #include "../PDEModelConcepts.hpp"
 
-namespace tsap {
+namespace treesap {
 
 // empty example implementation of an RHS, used to test decorator implementations
 template <int ncomp_, int ngrow_> struct NoOpRHS {
@@ -16,4 +16,4 @@ template <int ncomp_, int ngrow_> struct NoOpRHS {
 
 static_assert(RHSConcept<NoOpRHS<1, 1>>);
 
-} // namespace tsap
+} // namespace treesap

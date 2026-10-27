@@ -3,7 +3,7 @@
 #include "AMReX_MFIter.H"
 #include "Integrator.hpp"
 
-namespace tsap {
+namespace treesap {
 
 /**
  * @brief Implement the Euler time integration scheme.
@@ -54,4 +54,4 @@ class EulerIntegrator : public Integrator<PDEModelType> {
     }
 };
 
-}; // namespace tsap
+}; // namespace treesap

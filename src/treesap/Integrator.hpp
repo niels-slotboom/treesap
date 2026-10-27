@@ -12,7 +12,7 @@
 #include <AMReX_MultiFab.H>
 #include <AMReX_PhysBCFunct.H>
 
-namespace tsap {
+namespace treesap {
 
 /**
  * @brief Manage time integration for a PDE model.
@@ -145,4 +145,4 @@ class Integrator {
     std::optional<PlotExporter> exporter = std::nullopt; ///< Exporter instance.
 };
 
-} // namespace tsap
+} // namespace treesap

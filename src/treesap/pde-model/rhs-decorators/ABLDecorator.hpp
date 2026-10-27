@@ -4,7 +4,7 @@
 #include "../PDEModelConcepts.hpp"
 #include "NoOpRHS.hpp"
 
-namespace tsap {
+namespace treesap {
 
 /**
  * @brief Verifies that a profile type is trivially copyable, accepts a real value,
@@ -114,4 +114,4 @@ struct ABLDecorator {
 // Verify that ABLDecorator satisfies the right-hand side concept.
 static_assert(RHSConcept<ABLDecorator<NoOpRHS<1, 1>, decltype([](amrex::Real x) constexpr { return x; })>>);
 
-} // namespace tsap
+} // namespace treesap

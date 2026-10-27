@@ -7,7 +7,7 @@
 
 #include <filesystem>
 
-namespace tsap {
+namespace treesap {
 
 namespace fs = std::filesystem;
 
@@ -47,4 +47,4 @@ class PlotExporter {
     int export_interval;                          ///< Step interval for export execution.
 };
 
-} // namespace tsap
+} // namespace treesap

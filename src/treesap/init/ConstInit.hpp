@@ -1,7 +1,7 @@
 #pragma once
 #include "../pde-model/PDEModelConcepts.hpp"
 
-namespace tsap {
+namespace treesap {
 
 /**
  * @brief Sets all components to a constant value.
@@ -31,4 +31,4 @@ template <int ncomp_> struct ConstInit {
 // Verify that ConstInit satisfies the initialization concept for a test case.
 static_assert(InitConcept<ConstInit<1>>);
 
-} // namespace tsap
+} // namespace treesap

@@ -6,7 +6,7 @@
 #include "pde-model/rhs-decorators/NoOpRHS.hpp"
 #include "rhs-decorators/ABLDecorator.hpp"
 
-namespace tsap {
+namespace treesap {
 
 /**
  * @brief Define a PDE model with an absorbing boundary layer decorator.
@@ -40,4 +40,4 @@ class ABLPDEModel
 static_assert(
     PDEModelConcept<ABLPDEModel<NoOpRHS<1, 1>, ConstInit<1>, decltype([](amrex::Real x) constexpr { return x; })>>);
 
-} // namespace tsap
+} // namespace treesap

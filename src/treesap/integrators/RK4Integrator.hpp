@@ -2,7 +2,7 @@
 #include "AMReX_MFIter.H"
 #include "Integrator.hpp"
 
-namespace tsap {
+namespace treesap {
 
 /**
  * @brief Implements the Runge-Kutta 4 time integration scheme.
@@ -116,4 +116,4 @@ class RK4Integrator : public Integrator<PDEModelType> {
     amrex::MultiFab arg_next; ///< Temporary container for next stage argument.
 };
 
-} // namespace tsap
+} // namespace treesap

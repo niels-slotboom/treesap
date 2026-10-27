@@ -24,7 +24,7 @@ template <int ngrow_> struct WaveEqnRHS {
             return arr(i, j, k, Component::dphi_dt);
 
         case Component::dphi_dt: {
-            using namespace tsap::stencil;
+            using namespace treesap::stencil;
             return inv_dx_sq * laplacian<ngrow>(i, j, k, Component::phi, arr);
         }
 
@@ -34,4 +34,4 @@ template <int ngrow_> struct WaveEqnRHS {
     }
 };
 
-static_assert(tsap::RHSConcept<WaveEqnRHS<1>>);
+static_assert(treesap::RHSConcept<WaveEqnRHS<1>>);

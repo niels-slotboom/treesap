@@ -7,7 +7,7 @@
 #include <string>
 #include <utility>
 
-namespace tsap {
+namespace treesap {
 
 /**
  * @brief Initializes components using string expressions parsed at run time.
@@ -58,4 +58,4 @@ template <int ncomp_> struct FunctionInit {
 // Verify that FunctionInit satisfies the initialization concept.
 static_assert(InitConcept<FunctionInit<1>>);
 
-} // namespace tsap
+} // namespace treesap
