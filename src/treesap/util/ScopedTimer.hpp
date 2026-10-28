@@ -15,6 +15,9 @@ class ScopedTimer {
     explicit ScopedTimer(std::string name) : timer_name(std::move(name)), start(std::chrono::steady_clock::now()) {}
 
     ~ScopedTimer() {
+        if (!enabled)
+            return;
+
         Duration elapsed = std::chrono::steady_clock::now() - start;
 
         // update aggregated stats
@@ -50,6 +53,9 @@ class ScopedTimer {
         }
     }
     inline static std::unordered_map<std::string, std::pair<Duration, size_t>> totals_counts;
+
+  public:
+    inline static bool enabled = false;
 };
 
 } // namespace treesap
