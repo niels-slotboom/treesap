@@ -2,6 +2,7 @@
 
 #include "pde-model/PDEModelConcepts.hpp"
 #include "util/PlotExporter.hpp"
+#include "util/ScopedTimer.hpp"
 
 #include <AMReX.H>
 #include <AMReX_BCRec.H>
@@ -57,6 +58,7 @@ class Integrator {
      * @brief Initialize the state container using the initial condition functor.
      */
     void initialise() {
+        ScopedTimer timer("Integrator::initialise()");
         InitType init = model.get_init();
         const amrex::Geometry& geom = model.get_geometry();
         amrex::GpuArray<amrex::Real, 3> dx = geom.CellSizeArray();
@@ -82,6 +84,7 @@ class Integrator {
      * @param delta_time Size of the time step.
      */
     void step(amrex::Real delta_time) {
+        ScopedTimer timer("Integrator::step()");
         FillPatch(state_old, time);
 
         if (exporter)
@@ -107,6 +110,7 @@ class Integrator {
      * @param time_ Current simulation time.
      */
     void FillPatch(amrex::MultiFab& mf, amrex::Real time_) {
+        ScopedTimer timer("Integrator::FillPatch()");
         amrex::Vector<amrex::MultiFab*> src{&mf};
         amrex::Vector<amrex::Real> times{time_};
 
