@@ -51,6 +51,25 @@ class ScopedTimer {
                   << "StdDev: " << formatDuration(stdev_duration) << " (" << stats.count << " runs)\n";
     }
 
+    static void printOverview() {
+        std::cout << "--- --- --- ScopedTimer Profiling Overview --- --- ---" << std::endl;
+        for (const auto& [name, stats] : totals_counts) {
+            Duration avg_duration = stats.total_duration / stats.count;
+
+            // compute standard deviation in microseconds
+            double mean_us = std::chrono::duration<double, std::micro>(stats.total_duration).count() / stats.count;
+            double variance_us = (stats.sum_squares_us / stats.count) - (mean_us * mean_us);
+            double stdev_us = variance_us > 0.0 ? std::sqrt(variance_us) : 0.0;
+            auto stdev_duration = std::chrono::duration<double, std::micro>(stdev_us);
+
+            std::cout << "[Timer: " << name << "] "
+                      << "Executions: \t" << stats.count << " | "
+                      << "Total: \t" << formatDuration(stats.total_duration) << " | "
+                      << "Avg: \t" << formatDuration(avg_duration) << " | "
+                      << "StdDev: \r" << formatDuration(stdev_duration) << std::endl;
+        }
+    }
+
   private:
     std::string timer_name;
     TimePoint start;

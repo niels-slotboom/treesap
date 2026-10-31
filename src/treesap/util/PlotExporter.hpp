@@ -5,6 +5,8 @@
 #include <AMReX_MultiFab.H>
 #include <AMReX_PlotFileUtil.H>
 
+#include "util/ScopedTimer.hpp"
+
 #include <filesystem>
 
 namespace treesap {
@@ -36,6 +38,7 @@ class PlotExporter {
     void exportIfNecessary(int step, amrex::Real time) const {
         if (step % export_interval != 0) // only export when step % export_interval == 0
             return;
+        ScopedTimer timer("PlotExporter::exportIfNecessary()");
         amrex::WriteSingleLevelPlotfile(amrex::Concatenate(path.string(), step, 5), data, comp_names, geom, time, step);
     }
 

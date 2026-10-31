@@ -84,11 +84,12 @@ class Integrator {
      * @param delta_time Size of the time step.
      */
     void step(amrex::Real delta_time) {
+        if (exporter) {
+            exporter->exportIfNecessary(steps, time);
+        }
+
         ScopedTimer timer("Integrator::step()");
         FillPatch(state_old, time);
-
-        if (exporter)
-            exporter->exportIfNecessary(steps, time);
 
         computeNewState(delta_time);
         std::swap(state_old, state_new);
