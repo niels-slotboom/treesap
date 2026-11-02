@@ -10,13 +10,8 @@ namespace treesap {
  * @tparam Derived The derived class type being validated.
  * @tparam rank_ The tensor rank (order).
  */
-template <typename Derived, int rank_>
+template <typename Derived>
 concept TensorAliasImplementation =
-    []<int... Is>(std::integer_sequence<int, Is...>) {
-        return requires(const Derived d) {
-            { d.get_offset(Is...) } -> std::same_as<int>;
-        };
-    }(std::make_integer_sequence<int, rank_>{}) &&
     requires {
         typename std::integral_constant<int, Derived::ncomp>;
         requires Derived::ncomp > 0;
@@ -24,8 +19,14 @@ concept TensorAliasImplementation =
         requires Derived::ncomp >= 0;
         typename std::integral_constant<int, Derived::dim>;
         requires Derived::ncomp > 0;
-    } && requires(const Derived d, int ncomp) {
-        { d.restore_relative(ncomp) } -> std::same_as<amrex::GpuArray<int, rank_>>;
+    } &&
+    []<int... Is>(std::integer_sequence<int, Is...>) {
+        return requires(const Derived d) {
+            { d.get_offset(Is...) } -> std::same_as<int>;
+        };
+    }(std::make_integer_sequence<int, Derived::rank>{}) &&
+    requires(const Derived d, int ncomp) {
+        { d.restore_relative(ncomp) } -> std::same_as<amrex::GpuArray<int, Derived::rank>>;
     };
 
 /**
@@ -83,7 +84,7 @@ template <typename Derived, typename ArrayType> struct TensorAliasBase {
     }
 
     AMREX_FORCE_INLINE
-        AMREX_GPU_HOST_DEVICE amrex::GpuArray<int, rank> constexpr restore_absolute(int absolute_comp) const {
+    AMREX_GPU_HOST_DEVICE amrex::GpuArray<int, rank> constexpr restore_absolute(int absolute_comp) const {
         Derived* impl = static_cast<Derived*>(this);
         return impl->restore_relative(absolute_comp - comp_base);
     }

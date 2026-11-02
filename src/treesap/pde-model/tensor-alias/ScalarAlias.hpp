@@ -13,11 +13,9 @@ struct ScalarAlias : public TensorAliasBase<ScalarAlias<ArrayType, dim_>, ArrayT
     AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE int constexpr get_offset() const { return 0; }
 
     AMREX_FORCE_INLINE
-        AMREX_GPU_HOST_DEVICE amrex::GpuArray<int, 0> constexpr restore_relative(int /*rel_comp*/) const {
-        return {};
-    }
+    AMREX_GPU_HOST_DEVICE amrex::GpuArray<int, 0> constexpr restore_relative(int /*rel_comp*/) const { return {}; }
 };
 
-static_assert(TensorAliasImplementation<ScalarAlias<>, 0>);
+static_assert(TensorAliasImplementation<ScalarAlias<>>);
 
 } // namespace treesap

@@ -17,6 +17,6 @@ struct VectorAlias : public TensorAliasBase<VectorAlias<ArrayType, dim_>, ArrayT
     }
 };
 
-static_assert(TensorAliasImplementation<VectorAlias<>, 1>);
+static_assert(TensorAliasImplementation<VectorAlias<>>);
 
 } // namespace treesap
