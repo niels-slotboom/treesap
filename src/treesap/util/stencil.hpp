@@ -81,31 +81,31 @@ template <int ngrow> AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE constexpr amrex::R
 template <int ngrow> constexpr bool always_false = false;
 
 /// Forward declaration for derivative calculation.
-template <int ngrow, int... Dirs>
-AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real derivative(int i, int j, int k, int comp,
-                                                                const amrex::Array4<const amrex::Real>& arr);
+template <int ngrow, typename ArrayType, int... Dirs>
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE ArrayType derivative(int i, int j, int k, int comp,
+                                                              const amrex::Array4<ArrayType>& arr);
 
 // base template for derivative_impl struct
-template <int ngrow, int... Dirs> struct derivative_impl {
+template <int ngrow, typename ArrayType, int... Dirs> struct derivative_impl {
     static_assert(always_false<ngrow>,
                   "No stencil::derivative implementation available for requested template parameters");
     /// Base evaluation fallback function.
-    static AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real eval(int i, int j, int k, int comp,
-                                                                     const amrex::Array4<const amrex::Real>& arr) {
+    static AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE ArrayType eval(int i, int j, int k, int comp,
+                                                                   const amrex::Array4<ArrayType>& arr) {
         return 0;
     }
 };
 
 // --- FIRST DERIVATIVES ---
-template <int ngrow, int dir> struct derivative_impl<ngrow, dir> {
+template <int ngrow, typename ArrayType, int dir> struct derivative_impl<ngrow, ArrayType, dir> {
     /// Evaluates first derivative along a specified direction.
-    static AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real eval(int i, int j, int k, int comp,
-                                                                     const amrex::Array4<const amrex::Real>& arr) {
+    static AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE ArrayType eval(int i, int j, int k, int comp,
+                                                                   const amrex::Array4<ArrayType>& arr) {
         constexpr int i_offset = (dir == stencil::dir::x);
         constexpr int j_offset = (dir == stencil::dir::y);
         constexpr int k_offset = (dir == stencil::dir::z);
 
-        amrex::Real result = 0.0;
+        std::decay_t<ArrayType> result = 0.0;
 #pragma unroll
         for (int s = 1; s <= ngrow; ++s) {
             result += weights::first<ngrow>(s) * (arr(i + s * i_offset, j + s * j_offset, k + s * k_offset, comp) -
@@ -116,16 +116,16 @@ template <int ngrow, int dir> struct derivative_impl<ngrow, dir> {
 };
 
 // --- SECOND DERIVATIVES ---
-template <int ngrow, int dir0, int dir1> struct derivative_impl<ngrow, dir0, dir1> {
+template <int ngrow, typename ArrayType, int dir0, int dir1> struct derivative_impl<ngrow, ArrayType, dir0, dir1> {
     /// Evaluates second derivative (pure or mixed) along specified directions.
-    static AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real eval(int i, int j, int k, int comp,
-                                                                     const amrex::Array4<const amrex::Real>& arr) {
+    static AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE ArrayType eval(int i, int j, int k, int comp,
+                                                                   const amrex::Array4<ArrayType>& arr) {
         if constexpr (dir0 == dir1) { // unmixed derivative
             constexpr int i_offset = (dir0 == stencil::dir::x);
             constexpr int j_offset = (dir0 == stencil::dir::y);
             constexpr int k_offset = (dir0 == stencil::dir::z);
 
-            amrex::Real result = weights::second<ngrow>(0) * arr(i, j, k, comp);
+            std::decay_t<ArrayType> result = weights::second<ngrow>(0) * arr(i, j, k, comp);
 #pragma unroll
             for (int s = 1; s <= ngrow; ++s) {
                 result += weights::second<ngrow>(s) * (arr(i + s * i_offset, j + s * j_offset, k + s * k_offset, comp) +
@@ -137,12 +137,14 @@ template <int ngrow, int dir0, int dir1> struct derivative_impl<ngrow, dir0, dir
             constexpr int j_offset = (dir0 == stencil::dir::y);
             constexpr int k_offset = (dir0 == stencil::dir::z);
 
-            amrex::Real result = 0.0;
+            std::decay_t<ArrayType> result = 0.0;
 #pragma unroll
             for (int s = 1; s <= ngrow; ++s) {
-                result += weights::first<ngrow>(s) *
-                          (derivative<ngrow, dir1>(i + s * i_offset, j + s * j_offset, k + s * k_offset, comp, arr) -
-                           derivative<ngrow, dir1>(i - s * i_offset, j - s * j_offset, k - s * k_offset, comp, arr));
+                result +=
+                    weights::first<ngrow>(s) * (derivative<ngrow, ArrayType, dir1>(i + s * i_offset, j + s * j_offset,
+                                                                                   k + s * k_offset, comp, arr) -
+                                                derivative<ngrow, ArrayType, dir1>(i - s * i_offset, j - s * j_offset,
+                                                                                   k - s * k_offset, comp, arr));
             }
             return result;
         }
@@ -150,16 +152,17 @@ template <int ngrow, int dir0, int dir1> struct derivative_impl<ngrow, dir0, dir
 };
 
 // --- THIRD DERIVATIVES ---
-template <int ngrow, int dir0, int dir1, int dir2> struct derivative_impl<ngrow, dir0, dir1, dir2> {
+template <int ngrow, typename ArrayType, int dir0, int dir1, int dir2>
+struct derivative_impl<ngrow, ArrayType, dir0, dir1, dir2> {
     /// Evaluates third derivative (pure, mixed double-single, or mixed triple) along specified directions.
-    static AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real eval(int i, int j, int k, int comp,
-                                                                     const amrex::Array4<const amrex::Real>& arr) {
+    static AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE ArrayType eval(int i, int j, int k, int comp,
+                                                                   const amrex::Array4<ArrayType>& arr) {
         if constexpr (dir0 == dir1 && dir1 == dir2) { // unmixed derivative
             constexpr int i_offset = (dir0 == stencil::dir::x);
             constexpr int j_offset = (dir0 == stencil::dir::y);
             constexpr int k_offset = (dir0 == stencil::dir::z);
 
-            amrex::Real result = 0.0;
+            std::decay_t<ArrayType> result = 0.0;
 #pragma unroll
             for (int s = 1; s <= ngrow; ++s) {
                 result += weights::third<ngrow>(s) * (arr(i + s * i_offset, j + s * j_offset, k + s * k_offset, comp) -
@@ -175,14 +178,14 @@ template <int ngrow, int dir0, int dir1, int dir2> struct derivative_impl<ngrow,
             constexpr int j_offset = (udirs.first == stencil::dir::y);
             constexpr int k_offset = (udirs.first == stencil::dir::z);
             // hence take a first derivative along udirs.first of derivative<ngrow,udirs.second,udirs.second>(...)
-            amrex::Real result = 0.0;
+            std::decay_t<ArrayType> result = 0.0;
 #pragma unroll
             for (int s = 1; s <= ngrow; ++s) {
                 result += weights::first<ngrow>(s) *
-                          (derivative<ngrow, udirs.second, udirs.second>(i + s * i_offset, j + s * j_offset,
-                                                                         k + s * k_offset, comp, arr) -
-                           derivative<ngrow, udirs.second, udirs.second>(i - s * i_offset, j - s * j_offset,
-                                                                         k - s * k_offset, comp, arr));
+                          (derivative<ngrow, ArrayType, udirs.second, udirs.second>(i + s * i_offset, j + s * j_offset,
+                                                                                    k + s * k_offset, comp, arr) -
+                           derivative<ngrow, ArrayType, udirs.second, udirs.second>(i - s * i_offset, j - s * j_offset,
+                                                                                    k - s * k_offset, comp, arr));
             }
             return result;
         } else {
@@ -190,13 +193,14 @@ template <int ngrow, int dir0, int dir1, int dir2> struct derivative_impl<ngrow,
             constexpr int j_offset = (dir0 == stencil::dir::y);
             constexpr int k_offset = (dir0 == stencil::dir::z);
 
-            amrex::Real result = 0.0;
+            std::decay_t<ArrayType> result = 0.0;
 #pragma unroll
             for (int s = 1; s <= ngrow; ++s) {
-                result +=
-                    weights::first<ngrow>(s) *
-                    (derivative<ngrow, dir1, dir2>(i + s * i_offset, j + s * j_offset, k + s * k_offset, comp, arr) -
-                     derivative<ngrow, dir1, dir2>(i - s * i_offset, j - s * j_offset, k - s * k_offset, comp, arr));
+                result += weights::first<ngrow>(s) *
+                          (derivative<ngrow, ArrayType, dir1, dir2>(i + s * i_offset, j + s * j_offset,
+                                                                    k + s * k_offset, comp, arr) -
+                           derivative<ngrow, ArrayType, dir1, dir2>(i - s * i_offset, j - s * j_offset,
+                                                                    k - s * k_offset, comp, arr));
             }
             return result;
         }
@@ -204,79 +208,79 @@ template <int ngrow, int dir0, int dir1, int dir2> struct derivative_impl<ngrow,
 };
 
 /// Computes arbitrary order derivative given template directions using grid indices (i, j, k).
-template <int ngrow, int... Dirs>
-AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real derivative(int i, int j, int k, int comp,
-                                                                const amrex::Array4<const amrex::Real>& arr) {
+template <int ngrow, typename ArrayType, int... Dirs>
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE ArrayType derivative(int i, int j, int k, int comp,
+                                                              const amrex::Array4<ArrayType>& arr) {
     static_assert(((Dirs >= 0 && Dirs <= 2) && ...),
                   "All direction template parameters must be between 0 and 2 (inclusive)");
-    return derivative_impl<ngrow, Dirs...>::eval(i, j, k, comp, arr);
+    return derivative_impl<ngrow, ArrayType, Dirs...>::eval(i, j, k, comp, arr);
 }
 
 /// Computes arbitrary order derivative given template directions using an IntVect index.
-template <int ngrow, int... Dirs>
-AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real derivative(amrex::IntVect idx, int comp,
-                                                                const amrex::Array4<const amrex::Real>& arr) {
+template <int ngrow, typename ArrayType, int... Dirs>
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE ArrayType derivative(amrex::IntVect idx, int comp,
+                                                              const amrex::Array4<ArrayType>& arr) {
     static_assert(((Dirs >= 0 && Dirs <= 2) && ...),
                   "All direction template parameters must be between 0 and 2 (inclusive)");
-    return derivative_impl<ngrow, Dirs...>::eval(idx[0], idx[1], idx[2], comp, arr);
+    return derivative_impl<ngrow, ArrayType, Dirs...>::eval(idx[0], idx[1], idx[2], comp, arr);
 }
 
 // --- --- --- SPECIAL OPERATORS DERIVED FROM BASIC DERIVATIVE --- --- ---
 
 // --- GRADIENT ---
 /// Computes the gradient vector at a grid point.
-template <int ngrow>
-AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE amrex::GpuArray<amrex::Real, 3>
-gradient(int i, int j, int k, int comp, const amrex::Array4<const amrex::Real>& arr) {
+template <int ngrow, typename ArrayType>
+AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE amrex::GpuArray<ArrayType, 3> gradient(int i, int j, int k, int comp,
+                                                                                const amrex::Array4<ArrayType>& arr) {
     return {
-        derivative<ngrow, dir::x>(i, j, k, comp, arr),
-        derivative<ngrow, dir::y>(i, j, k, comp, arr),
-        derivative<ngrow, dir::z>(i, j, k, comp, arr),
+        derivative<ngrow, ArrayType, dir::x>(i, j, k, comp, arr),
+        derivative<ngrow, ArrayType, dir::y>(i, j, k, comp, arr),
+        derivative<ngrow, ArrayType, dir::z>(i, j, k, comp, arr),
     };
 }
 
 /// Computes the squared magnitude of the gradient at a grid point.
-template <int ngrow>
-AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE amrex::Real gradient_squared(int i, int j, int k, int comp,
-                                                                      const amrex::Array4<const amrex::Real>& arr) {
-    const auto grad = gradient<ngrow>(i, j, k, comp, arr);
+template <int ngrow, typename ArrayType>
+AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE ArrayType gradient_squared(int i, int j, int k, int comp,
+                                                                    const amrex::Array4<ArrayType>& arr) {
+    const auto grad = gradient<ngrow, ArrayType>(i, j, k, comp, arr);
     return grad[0] * grad[0] + grad[1] * grad[1] + grad[2] * grad[2];
 }
 
 // --- LAPLACIAN ---
 // NOTE: This only works for dx = dy = dz.
 /// Computes the Laplacian operator at a grid point.
-template <int ngrow>
-AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE amrex::Real laplacian(int i, int j, int k, int comp,
-                                                               const amrex::Array4<const amrex::Real>& arr) {
-    return derivative<ngrow, dir::x, dir::x>(i, j, k, comp, arr) +
-           derivative<ngrow, dir::y, dir::y>(i, j, k, comp, arr) +
-           derivative<ngrow, dir::z, dir::z>(i, j, k, comp, arr);
+template <int ngrow, typename ArrayType>
+AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE ArrayType laplacian(int i, int j, int k, int comp,
+                                                             const amrex::Array4<ArrayType>& arr) {
+    return derivative<ngrow, ArrayType, dir::x, dir::x>(i, j, k, comp, arr) +
+           derivative<ngrow, ArrayType, dir::y, dir::y>(i, j, k, comp, arr) +
+           derivative<ngrow, ArrayType, dir::z, dir::z>(i, j, k, comp, arr);
 }
 
 // --- HESSIAN ---
 /// Computes the Hessian matrix of second-order partial derivatives at a grid point.
-template <int ngrow>
-AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE amrex::Array2D<amrex::Real, 0, 2, 0, 2>
-hessian(int i, int j, int k, int comp, const amrex::Array4<const amrex::Real>& arr) {
-    amrex::Array2D<amrex::Real, 0, 2, 0, 2> H;
+template <int ngrow, typename ArrayType>
+AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE amrex::Array2D<ArrayType, 0, 2, 0, 2>
+hessian(int i, int j, int k, int comp, const amrex::Array4<ArrayType>& arr) {
+    amrex::Array2D<ArrayType, 0, 2, 0, 2> H;
     // diagonal
-    H(0, 0) = derivative<ngrow, dir::x, dir::x>(i, j, k, comp, arr);
-    H(1, 1) = derivative<ngrow, dir::y, dir::y>(i, j, k, comp, arr);
-    H(2, 2) = derivative<ngrow, dir::z, dir::z>(i, j, k, comp, arr);
+    H(0, 0) = derivative<ngrow, ArrayType, dir::x, dir::x>(i, j, k, comp, arr);
+    H(1, 1) = derivative<ngrow, ArrayType, dir::y, dir::y>(i, j, k, comp, arr);
+    H(2, 2) = derivative<ngrow, ArrayType, dir::z, dir::z>(i, j, k, comp, arr);
     // off-diagonal
-    H(0, 1) = H(1, 0) = derivative<ngrow, dir::x, dir::y>(i, j, k, comp, arr);
-    H(0, 2) = H(2, 0) = derivative<ngrow, dir::x, dir::z>(i, j, k, comp, arr);
-    H(1, 2) = H(2, 1) = derivative<ngrow, dir::y, dir::z>(i, j, k, comp, arr);
+    H(0, 1) = H(1, 0) = derivative<ngrow, ArrayType, dir::x, dir::y>(i, j, k, comp, arr);
+    H(0, 2) = H(2, 0) = derivative<ngrow, ArrayType, dir::x, dir::z>(i, j, k, comp, arr);
+    H(1, 2) = H(2, 1) = derivative<ngrow, ArrayType, dir::y, dir::z>(i, j, k, comp, arr);
 
     return H;
 }
 
 // --- --- --- KREISS-OLIGER DISSIPATION TERMS --- --- ---
 /// Computes the Kreiss-Oliger dissipation term along a given coordinate direction.
-template <int ngrow, int dir>
-AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE amrex::Real kreiss_oliger(int i, int j, int k, int comp,
-                                                                   const amrex::Array4<const amrex::Real>& arr) {
+template <int ngrow, int dir, typename ArrayType>
+AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE ArrayType kreiss_oliger(int i, int j, int k, int comp,
+                                                                 const amrex::Array4<ArrayType>& arr) {
     static_assert(ngrow > 0, "Can only apply Kreiss-Oliger stencil for ngrow >= 1");
     constexpr int i_offset = (dir == stencil::dir::x) ? 1 : 0;
     constexpr int j_offset = (dir == stencil::dir::y) ? 1 : 0;
@@ -285,7 +289,7 @@ AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE amrex::Real kreiss_oliger(int i, int j,
     constexpr int r = ngrow;
     constexpr double norm = 1.0 / static_cast<double>(cexprmath::power(2, 2 * ngrow));
 
-    amrex::Real result = -cexprmath::binom(2 * r, r) * arr(i, j, k, comp);
+    std::decay_t<ArrayType> result = -cexprmath::binom(2 * r, r) * arr(i, j, k, comp);
 #pragma unroll
     for (int s = 1; s <= ngrow; ++s) {
         result += -cexprmath::sign(s) * cexprmath::binom(2 * r, r + s) *
@@ -293,27 +297,6 @@ AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE amrex::Real kreiss_oliger(int i, int j,
                    arr(i - s * i_offset, j - s * j_offset, k - s * k_offset, comp));
     }
     return result * norm;
-}
-
-// Recursive template for Delta^ngrow, the isotropic version of Kreiss-Oliger dissipation
-template <int ngrow>
-AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE amrex::Real
-isotropic_kreiss_oliger(int i, int j, int k, int comp, const amrex::Array4<const amrex::Real>& arr) {
-    static_assert(ngrow > 0); // prevent this from being used for non-positive ngrow
-    amrex::Real x_pair = isotropic_kreiss_oliger<ngrow - 1>(i + 1, j, k, comp, arr) +
-                         isotropic_kreiss_oliger<ngrow - 1>(i - 1, j, k, comp, arr);
-    amrex::Real y_pair = isotropic_kreiss_oliger<ngrow - 1>(i, j + 1, k, comp, arr) +
-                         isotropic_kreiss_oliger<ngrow - 1>(i, j - 1, k, comp, arr);
-    amrex::Real z_pair = isotropic_kreiss_oliger<ngrow - 1>(i, j, k + 1, comp, arr) +
-                         isotropic_kreiss_oliger<ngrow - 1>(i, j, k - 1, comp, arr);
-    return -0.25 * (x_pair + y_pair + z_pair - 6 * isotropic_kreiss_oliger<ngrow - 1>(i, j, k, comp, arr));
-}
-
-// Base case for Delta^0 = Id
-template <>
-AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE amrex::Real
-isotropic_kreiss_oliger<0>(int i, int j, int k, int comp, const amrex::Array4<const amrex::Real>& arr) {
-    return -arr(i, j, k, comp);
 }
 }; // namespace stencil
 
