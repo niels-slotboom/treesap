@@ -87,6 +87,7 @@ class RK4Integrator : public Integrator<PDEModelType> {
             amrex::Array4<const amrex::Real> arg_arr = arg.const_array(mfi);
             amrex::Array4<amrex::Real> arg_next_arr = arg_next.array(mfi);
             amrex::ParallelFor(box, [=] AMREX_GPU_DEVICE(int i, int j, int k) {
+#pragma unroll
                 for (int comp = 0; comp < ncomp; ++comp) {
                     // compute stage k_i for current voxel and accumulate
                     amrex::Real stage;
