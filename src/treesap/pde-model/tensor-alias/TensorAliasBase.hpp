@@ -31,7 +31,7 @@ concept TensorAliasImplementation =
  * @tparam ArrayType The data type stored in the array.
  * @tparam dim_ The spatial dimension count.
  */
-template <typename Derived, int rank_, typename ArrayType = amrex::Real, int dim_ = 3> struct TensorAliasBase {
+template <typename Derived, int rank_, typename ArrayType, int dim_ = 3> struct TensorAliasBase {
     /// The rank (order) of the tensor.
     static constexpr int rank = rank_;
 

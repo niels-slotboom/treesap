@@ -4,7 +4,7 @@
 
 namespace treesap {
 
-template <typename ArrayType = amrex::Real, int dim_ = 3>
+template <typename ArrayType = const amrex::Real, int dim_ = 3>
 struct VectorAlias : public TensorAliasBase<VectorAlias<ArrayType, dim_>, 1, ArrayType, dim_> {
     static constexpr int ncomp = dim_;
 

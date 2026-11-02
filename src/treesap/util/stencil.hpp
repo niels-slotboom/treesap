@@ -298,6 +298,7 @@ AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE ArrayType kreiss_oliger(int i, int j, i
     }
     return result * norm;
 }
-}; // namespace stencil
+
+} // namespace stencil
 
 } // namespace treesap
