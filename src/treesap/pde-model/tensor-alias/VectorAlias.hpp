@@ -10,9 +10,9 @@ struct VectorAlias : public TensorAliasBase<VectorAlias<ArrayType, dim_>, ArrayT
     static constexpr int rank = 1;
     static constexpr int dim = dim_;
 
-    AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE int get_offset(int a) const { return a; }
+    AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE int constexpr get_offset(int a) const { return a; }
 
-    AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE amrex::GpuArray<int, 1> restore_relative(int rel_comp) const {
+    AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE amrex::GpuArray<int, 1> constexpr restore_relative(int rel_comp) const {
         return {rel_comp};
     }
 };

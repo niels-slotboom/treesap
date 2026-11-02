@@ -48,7 +48,7 @@ template <typename Derived, typename ArrayType> struct TensorAliasBase {
      */
     template <typename... TensorIndices>
         requires(sizeof...(TensorIndices) == rank && (std::is_same_v<int, TensorIndices> && ...))
-    AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE int get_comp(TensorIndices... tensor_indices) const {
+    AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE int constexpr get_comp(TensorIndices... tensor_indices) const {
         Derived* impl = static_cast<Derived*>(this);
         if constexpr (rank == 0) {
             return comp_base + impl->get_offset();
@@ -77,12 +77,13 @@ template <typename Derived, typename ArrayType> struct TensorAliasBase {
      * @param comp The absolute component index to check.
      * @return True if the component is within range, false otherwise.
      */
-    AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE bool contains(int absolute_comp) const {
+    AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE bool constexpr contains(int absolute_comp) const {
         int comp_rel_to_base = absolute_comp - comp_base;
         return comp_rel_to_base >= 0 && comp_rel_to_base < Derived::ncomp;
     }
 
-    AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE amrex::GpuArray<int, rank> restore_absolute(int absolute_comp) const {
+    AMREX_FORCE_INLINE
+        AMREX_GPU_HOST_DEVICE amrex::GpuArray<int, rank> constexpr restore_absolute(int absolute_comp) const {
         Derived* impl = static_cast<Derived*>(this);
         return impl->restore_relative(absolute_comp - comp_base);
     }
