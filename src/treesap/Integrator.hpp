@@ -3,6 +3,7 @@
 #include "pde-model/PDEModelConcepts.hpp"
 #include "util/PlotExporter.hpp"
 #include "util/ScopedTimer.hpp"
+#include "util/static_for.hpp"
 
 #include <AMReX.H>
 #include <AMReX_BCRec.H>
@@ -72,9 +73,7 @@ class Integrator {
                 amrex::Real y = lo[1] + (j + 0.5) * dx[1];
                 amrex::Real z = lo[2] + (k + 0.5) * dx[2];
 
-                for (int comp = 0; comp < ncomp; comp++) {
-                    arr(i, j, k, comp) = init(x, y, z, comp);
-                }
+                static_for<ncomp>([=] AMREX_GPU_DEVICE<int comp>() { arr(i, j, k, comp) = init(x, y, z, comp); });
             });
         }
     }

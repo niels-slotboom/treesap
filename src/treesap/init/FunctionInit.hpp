@@ -22,14 +22,13 @@ template <int ncomp_> struct FunctionInit {
     FunctionInit() = delete;
 
     /**
-     * @brief Constructor creates host parsers and extracts the compiled executors.
+     * @brief Constructor compiles string expressions into device-safe executors on the host.
      * @param exprs_ Array of string expressions for each component.
      */
-    explicit FunctionInit(amrex::Array<std::string, ncomp> exprs_)
-        : exprs(std::move(exprs_)), parsers(std::make_shared<amrex::Array<amrex::Parser, ncomp>>()) {
+    explicit FunctionInit(const amrex::Array<std::string, ncomp>& exprs_) {
         for (int i = 0; i < ncomp; ++i) {
-            amrex::Parser& parser = (*parsers)[i];
-            parser.define(exprs[i]);
+            amrex::Parser parser;
+            parser.define(exprs_[i]);
             parser.registerVariables({"x", "y", "z"});
             executors[i] = parser.compile<3>();
         }
@@ -49,9 +48,6 @@ template <int ncomp_> struct FunctionInit {
     }
 
   private:
-    amrex::Array<std::string, ncomp> exprs; ///< String expressions for each component.
-    std::shared_ptr<amrex::Array<amrex::Parser, ncomp>>
-        parsers; ///< Shared pointer because parsers need to be heap-allocated to allow for copy.
     amrex::GpuArray<amrex::ParserExecutor<3>, ncomp> executors; ///< Compiled executors for execution.
 };
 

@@ -64,7 +64,7 @@ concept BCConcept = std::is_trivially_copyable_v<F> &&
  * @tparam F Type to check against the concept.
  */
 template <typename F>
-concept InitConcept = std::is_copy_constructible_v<F> &&
+concept InitConcept = std::is_trivially_copyable_v<F> &&
                       requires {
                           typename std::integral_constant<int, F::ncomp>;
                           requires F::ncomp > 0;
