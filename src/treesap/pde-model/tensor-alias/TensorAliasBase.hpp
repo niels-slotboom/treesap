@@ -2,78 +2,93 @@
 
 #include "AMReX_Array4.H"
 #include "AMReX_Extension.H"
-#include "util/cexprmath.hpp"
 
 namespace treesap {
 
 /**
- * @brief Concept enforcing that a CRTP derived class implements a compatible get_offset method.
- *
- * Verifies that the derived class provides a member function `get_offset` which accepts
- * a number of integer arguments equal to @p rank_ and returns an `int`.
- *
- * @tparam Derived The CRTP derived class type being checked.
- * @tparam rank_ The expected rank (number of dimensions/indices) of the tensor.
+ * @brief Concept that verifies a derived class implements the required tensor offset and component interface.
+ * @tparam Derived The derived class type being validated.
+ * @tparam rank_ The tensor rank (order).
  */
 template <typename Derived, int rank_>
-concept TensorAliasImplementation = []<int... Is>(std::integer_sequence<int, Is...>) {
-    return requires(Derived d) {
-        { d.get_offset(Is...) } -> std::same_as<int>;
+concept TensorAliasImplementation =
+    []<int... Is>(std::integer_sequence<int, Is...>) {
+        return requires(const Derived d) {
+            { d.get_offset(Is...) } -> std::same_as<int>;
+        };
+    }(std::make_integer_sequence<int, rank_>{}) &&
+    requires {
+        typename std::integral_constant<int, Derived::ncomp>;
+        requires Derived::ncomp > 0;
+    } && requires(const Derived d, int ncomp) {
+        { d.restore_relative(ncomp) } -> std::same_as<amrex::GpuArray<int, rank_>>;
     };
-}(std::make_integer_sequence<int, rank_>{});
 
 /**
- * @brief CRTP base class template providing multidimensional tensor indexing over AMReX arrays.
- *
- * `TensorAlias` manages spatial grid indexing (`i, j, k`) combined with a component offset
- * calculated via a CRTP-derived implementation. It maps tensor components to a contiguous
- * range within an underlying `amrex::Array4`.
- *
- * @tparam Derived The CRTP derived class type. Must satisfy `TensorAliasImplementation`.
- * @tparam rank_ The tensor rank (order).
- * @tparam ArrayType The underlying data type stored in the array (defaults to `amrex::Real`).
- * @tparam dim_ The spatial or component dimension size (defaults to 3).
+ * @brief Base class for mapping multi-component tensors stored in an AMReX 4D array.
+ * @tparam Derived The CRTP derived class implementing index offset logic.
+ * @tparam rank_ The rank of the tensor (supports rank 0 for scalars).
+ * @tparam ArrayType The data type stored in the array.
+ * @tparam dim_ The spatial dimension count.
  */
-template <typename Derived, int rank_, typename ArrayType = amrex::Real, int dim_ = 3>
-    requires(TensorAliasImplementation<Derived, rank_>)
-struct TensorAliasBase {
+template <typename Derived, int rank_, typename ArrayType = amrex::Real, int dim_ = 3> struct TensorAliasBase {
     /// The rank (order) of the tensor.
     static constexpr int rank = rank_;
 
-    /// The dimension size of each tensor index axis.
+    /// The spatial dimension size of each tensor index axis.
     static constexpr int dim = dim_;
 
-    /// Total number of tensor components (`dim^rank`).
-    static constexpr int ncomp = cexprmath::power(dim, rank);
-
+    /**
+     * @brief Computes the absolute component index for given tensor indices.
+     * @tparam TensorIndices Variadic integer types representing tensor indices.
+     * @param tensor_indices The tensor index values (empty for rank 0 scalars).
+     * @return The absolute component index in the underlying array.
+     */
     template <typename... TensorIndices>
         requires(sizeof...(TensorIndices) == rank && (std::is_same_v<int, TensorIndices> && ...))
-    AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE int get_comp(TensorIndices... tensor_indices) {
+    AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE int get_comp(TensorIndices... tensor_indices) const {
         Derived* impl = static_cast<Derived*>(this);
-        return comp_base + impl->get_offset(tensor_indices...);
+        if constexpr (rank == 0) {
+            return comp_base + impl->get_offset();
+        } else {
+            return comp_base + impl->get_offset(tensor_indices...);
+        }
     }
 
     /**
-     * @brief Accesses a specific tensor component at a given spatial grid location.
-     *
-     * @tparam TensorIndices Variadic pack of integer tensor index types.
-     * @param i Spatial index in the x-direction.
-     * @param j Spatial index in the y-direction.
-     * @param k Spatial index in the z-direction.
-     * @param tensor_indices The individual tensor component indices (must match @p rank in count).
-     * @return amrex::Real& Reference to the targeted element in the array.
+     * @brief Accesses a specific array element using spatial and tensor indices.
+     * @param i The grid index in the x direction.
+     * @param j The grid index in the y direction.
+     * @param k The grid index in the z direction.
+     * @param tensor_indices The tensor index values (omitted for rank 0 scalars).
+     * @return Reference to the array element.
      */
     template <typename... TensorIndices>
         requires(sizeof...(TensorIndices) == rank && (std::is_same_v<int, TensorIndices> && ...))
     AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE ArrayType& operator()(int i, int j, int k,
-                                                                   TensorIndices... tensor_indices) {
+                                                                   TensorIndices... tensor_indices) const {
         return arr(i, j, k, get_comp(tensor_indices...));
+    }
+
+    /**
+     * @brief Checks if a component index falls within the valid range for this tensor alias.
+     * @param comp The absolute component index to check.
+     * @return True if the component is within range, false otherwise.
+     */
+    AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE bool contains(int absolute_comp) const {
+        int comp_rel_to_base = absolute_comp - comp_base;
+        return comp_rel_to_base >= 0 && comp_rel_to_base < Derived::ncomp;
+    }
+
+    AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE amrex::GpuArray<int, rank> restore_absolute(int absolute_comp) const {
+        Derived* impl = static_cast<Derived*>(this);
+        return impl->restore_relative(absolute_comp - comp_base);
     }
 
     /// Reference to the underlying 4D AMReX array data structure.
     const amrex::Array4<ArrayType>& arr;
 
-    /// Base component index where the contiguous range of @p ncomp components starts.
+    /// Base component index where the contiguous component range starts.
     const int comp_base = 0;
 };
 
