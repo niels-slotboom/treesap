@@ -5,8 +5,10 @@
 namespace treesap {
 
 template <typename ArrayType = const amrex::Real, int dim_ = 3>
-struct VectorAlias : public TensorAliasBase<VectorAlias<ArrayType, dim_>, 1, ArrayType, dim_> {
+struct VectorAlias : public TensorAliasBase<VectorAlias<ArrayType, dim_>, ArrayType> {
     static constexpr int ncomp = dim_;
+    static constexpr int rank = 1;
+    static constexpr int dim = dim_;
 
     AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE int get_offset(int a) const { return a; }
 

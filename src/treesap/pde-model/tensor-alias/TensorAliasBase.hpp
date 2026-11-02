@@ -20,6 +20,10 @@ concept TensorAliasImplementation =
     requires {
         typename std::integral_constant<int, Derived::ncomp>;
         requires Derived::ncomp > 0;
+        typename std::integral_constant<int, Derived::rank>;
+        requires Derived::ncomp >= 0;
+        typename std::integral_constant<int, Derived::dim>;
+        requires Derived::ncomp > 0;
     } && requires(const Derived d, int ncomp) {
         { d.restore_relative(ncomp) } -> std::same_as<amrex::GpuArray<int, rank_>>;
     };
@@ -31,12 +35,10 @@ concept TensorAliasImplementation =
  * @tparam ArrayType The data type stored in the array.
  * @tparam dim_ The spatial dimension count.
  */
-template <typename Derived, int rank_, typename ArrayType, int dim_ = 3> struct TensorAliasBase {
-    /// The rank (order) of the tensor.
-    static constexpr int rank = rank_;
-
-    /// The spatial dimension size of each tensor index axis.
-    static constexpr int dim = dim_;
+template <typename Derived, typename ArrayType> struct TensorAliasBase {
+    static constexpr int ncomp = Derived::ncomp;
+    static constexpr int rank = Derived::rank;
+    static constexpr int dim = Derived::dim;
 
     /**
      * @brief Computes the absolute component index for given tensor indices.
