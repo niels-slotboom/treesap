@@ -46,6 +46,13 @@ struct TensorAliasBase {
     /// Total number of tensor components (`dim^rank`).
     static constexpr int ncomp = cexprmath::power(dim, rank);
 
+    template <typename... TensorIndices>
+        requires(sizeof...(TensorIndices) == rank && (std::is_same_v<int, TensorIndices> && ...))
+    AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE int get_comp(TensorIndices... tensor_indices) {
+        Derived* impl = static_cast<Derived*>(this);
+        return comp_base + impl->get_offset(tensor_indices...);
+    }
+
     /**
      * @brief Accesses a specific tensor component at a given spatial grid location.
      *
@@ -58,10 +65,9 @@ struct TensorAliasBase {
      */
     template <typename... TensorIndices>
         requires(sizeof...(TensorIndices) == rank && (std::is_same_v<int, TensorIndices> && ...))
-    AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE amrex::Real& operator()(int i, int j, int k,
-                                                                     TensorIndices... tensor_indices) {
-        Derived* impl = static_cast<Derived*>(this);
-        return arr(i, j, k, comp_base + impl->get_offset(tensor_indices...));
+    AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE ArrayType& operator()(int i, int j, int k,
+                                                                   TensorIndices... tensor_indices) {
+        return arr(i, j, k, get_comp(tensor_indices...));
     }
 
     /// Reference to the underlying 4D AMReX array data structure.
