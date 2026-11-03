@@ -87,15 +87,14 @@ class RK4Integrator : public Integrator<PDEModelType> {
             amrex::Array4<const amrex::Real> arg_arr = arg.const_array(mfi);
             amrex::Array4<amrex::Real> arg_next_arr = arg_next.array(mfi);
             amrex::ParallelFor(box, [=] AMREX_GPU_DEVICE(int i, int j, int k) {
-#pragma unroll
-                for (int comp = 0; comp < ncomp; ++comp) {
+                static_for<ncomp>([=] AMREX_GPU_DEVICE<int comp>() {
                     // compute stage k_i for current voxel and accumulate
                     amrex::Real stage;
                     if constexpr (is_first) {
-                        stage = rhs_(i, j, k, comp, time_arg, init_arr);
+                        stage = rhs_.template operator()<comp>(i, j, k, time_arg, init_arr);
                         acc_arr(i, j, k, comp) = init_arr(i, j, k, comp) + b * stage;
                     } else {
-                        stage = rhs_(i, j, k, comp, time_arg, arg_arr);
+                        stage = rhs_.template operator()<comp>(i, j, k, time_arg, arg_arr);
                         acc_arr(i, j, k, comp) += b * stage;
                     }
 
@@ -103,7 +102,7 @@ class RK4Integrator : public Integrator<PDEModelType> {
                     if constexpr (!is_last) {
                         arg_next_arr(i, j, k, comp) = init_arr(i, j, k, comp) + a_next * stage;
                     }
-                }
+                });
             });
         }
     }

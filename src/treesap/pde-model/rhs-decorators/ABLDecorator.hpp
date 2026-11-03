@@ -73,9 +73,11 @@ struct ABLDecorator {
      * @param arr Data array view buffer.
      * @return Adjusted right-hand side value.
      */
-    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real operator()(int i, int j, int k, int comp, amrex::Real time,
+    template <int comp>
+    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real operator()(int i, int j, int k, amrex::Real time,
                                                                     const amrex::Array4<const amrex::Real>& arr) const {
-        return rhs(i, j, k, comp, time, arr) - sigma(i, j, k) * (arr(i, j, k, comp) - data.target_values[comp]);
+        return rhs.template operator()<comp>(i, j, k, time, arr) -
+               sigma(i, j, k) * (arr(i, j, k, comp) - data.target_values[comp]);
     }
 
     /**

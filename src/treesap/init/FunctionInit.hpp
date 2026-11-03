@@ -61,8 +61,9 @@ template <int ncomp_> struct FunctionInit {
      * @param comp Component index.
      * @return Evaluated real value.
      */
+    template<int comp>
     AMREX_GPU_HOST_DEVICE
-    amrex::Real operator()(amrex::Real x, amrex::Real y, amrex::Real z, int comp) const {
+    amrex::Real operator()(amrex::Real x, amrex::Real y, amrex::Real z) const {
         return executors[comp](x, y, z);
     }
 

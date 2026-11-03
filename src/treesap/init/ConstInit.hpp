@@ -24,8 +24,10 @@ template <int ncomp_> struct ConstInit {
      * @param comp Component index.
      * @return Constant value.
      */
-    AMREX_GPU_HOST_DEVICE
-    amrex::Real operator()(amrex::Real x, amrex::Real y, amrex::Real z, int comp) const { return value; }
+    template <int comp>
+    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real operator()(amrex::Real x, amrex::Real y, amrex::Real z) const {
+        return value;
+    }
 };
 
 // Verify that ConstInit satisfies the initialization concept for a test case.

@@ -5,6 +5,7 @@
 #include "WaveEqnRHS.hpp"
 #include "init/ConstInit.hpp"
 #include "init/FunctionInit.hpp"
+#include "integrators/EulerIntegrator.hpp"
 #include "integrators/RK4Integrator.hpp"
 #include "pde-model/ABLPDEModel.hpp"
 #include "pde-model/rhs-decorators/NoOpRHS.hpp"

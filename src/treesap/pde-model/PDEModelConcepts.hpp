@@ -15,23 +15,16 @@ namespace treesap {
  * @tparam F Type to check against the concept.
  */
 template <typename F>
-concept RHSConcept = std::is_trivially_copyable_v<F> &&
-                     requires {
-                         typename std::integral_constant<int, F::ncomp>;
-                         typename std::integral_constant<int, F::ngrow>;
-                         requires F::ncomp > 0;
-                         requires F::ngrow >= 0;
-                     } &&
-                     requires(const F& f,
-                              int i,                                      ///< 1. Grid cell index in X direction
-                              int j,                                      ///< 2. Grid cell index in Y direction
-                              int k,                                      ///< 3. Grid cell index in Z direction
-                              int comp,                                   ///< 4. Component index
-                              amrex::Real time,                           ///< 5. Current simulation time
-                              const amrex::Array4<const amrex::Real>& arr ///< 6. Data array view buffer
-                     ) {
-                         { f(i, j, k, comp, time, arr) } -> std::convertible_to<amrex::Real>;
-                     };
+concept RHSConcept = std::is_trivially_copyable_v<F> && requires {
+    typename std::integral_constant<int, F::ncomp>;
+    typename std::integral_constant<int, F::ngrow>;
+    requires F::ncomp > 0;
+    requires F::ngrow >= 0;
+} && requires(const F& f, int i, int j, int k, amrex::Real time, const amrex::Array4<const amrex::Real>& arr) {
+    // Use a compile-time constant (e.g., 0) as the template argument,
+    // assuming components are indexed from 0 up to F::ncomp - 1.
+    { f.template operator()<0>(i, j, k, time, arr) } -> std::convertible_to<amrex::Real>;
+};
 
 /**
  * @brief Verifies that a type implements boundary condition filling logic.
@@ -72,10 +65,9 @@ concept InitConcept = std::is_trivially_copyable_v<F> &&
                       requires(const F& f,
                                amrex::Real x, ///< 1. Physical coordinate in X direction
                                amrex::Real y, ///< 2. Physical coordinate in Y direction
-                               amrex::Real z, ///< 3. Physical coordinate in Z direction
-                               int comp       ///< 4. Component index to evaluate
+                               amrex::Real z  ///< 3. Physical coordinate in Z direction
                       ) {
-                          { f(x, y, z, comp) } -> std::convertible_to<amrex::Real>;
+                          { f.template operator()<0>(x, y, z) } -> std::convertible_to<amrex::Real>;
                       };
 
 /**

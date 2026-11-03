@@ -73,7 +73,8 @@ class Integrator {
                 amrex::Real y = lo[1] + (j + 0.5) * dx[1];
                 amrex::Real z = lo[2] + (k + 0.5) * dx[2];
 
-                static_for<ncomp>([=] AMREX_GPU_DEVICE<int comp>() { arr(i, j, k, comp) = init(x, y, z, comp); });
+                static_for<ncomp>(
+                    [=] AMREX_GPU_DEVICE<int comp>() { arr(i, j, k, comp) = init.template operator()<comp>(x, y, z); });
             });
         }
     }

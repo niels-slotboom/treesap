@@ -16,19 +16,15 @@ template <int ngrow_> struct WaveEqnRHS {
 
     amrex::Real inv_dx_sq;
 
-    AMREX_GPU_HOST_DEVICE
-    amrex::Real operator()(int i, int j, int k, int comp, amrex::Real time,
-                           const amrex::Array4<const amrex::Real>& arr) const {
-        switch (comp) {
-        case Component::phi:
+    template <int comp>
+    AMREX_GPU_HOST_DEVICE amrex::Real operator()(int i, int j, int k, amrex::Real time,
+                                                 const amrex::Array4<const amrex::Real>& arr) const {
+        if constexpr (comp == Component::phi) {
             return arr(i, j, k, Component::dphi_dt);
-
-        case Component::dphi_dt: {
+        } else if constexpr (comp == Component::dphi_dt) {
             using namespace treesap::stencil;
             return inv_dx_sq * laplacian<ngrow>(i, j, k, Component::phi, arr);
-        }
-
-        default:
+        } else {
             return NAN;
         }
     }

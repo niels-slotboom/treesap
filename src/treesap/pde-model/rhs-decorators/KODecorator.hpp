@@ -31,12 +31,13 @@ struct KODecorator {
      * @param arr Data array view buffer.
      * @return Combined right-hand side value with dissipation.
      */
-    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real operator()(int i, int j, int k, int comp, amrex::Real time,
+    template <int comp>
+    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real operator()(int i, int j, int k, amrex::Real time,
                                                                     const amrex::Array4<const amrex::Real>& arr) const {
         using namespace stencil;
 
         if constexpr (isotropic) {
-            return rhs(i, j, k, comp, time, arr) +
+            return rhs<comp>(i, j, k, time, arr) +
                    dx_inv * strength * isotropic_kreiss_oliger<ngrow>(i, j, k, comp, arr);
         } else {
             amrex::Real ko_term = 0.0;
@@ -44,7 +45,7 @@ struct KODecorator {
             ko_term += kreiss_oliger<ngrow, dir::y>(i, j, k, comp, arr);
             ko_term += kreiss_oliger<ngrow, dir::z>(i, j, k, comp, arr);
 
-            return rhs(i, j, k, comp, time, arr) + dx_inv * strength * ko_term;
+            return rhs.template operator()<comp>(i, j, k, time, arr) + dx_inv * strength * ko_term;
         }
     }
 

@@ -46,10 +46,10 @@ class EulerIntegrator : public Integrator<PDEModelType> {
             amrex::Array4<amrex::Real> arr_new = state_new.array(mfi);
 
             amrex::ParallelFor(box, [=] AMREX_GPU_DEVICE(int i, int j, int k) {
-#pragma unroll
-                for (int comp = 0; comp < ncomp; ++comp) {
-                    arr_new(i, j, k, comp) = arr_old(i, j, k, comp) + delta_time * rhs(i, j, k, comp, time_, arr_old);
-                }
+                static_for<ncomp>([=] AMREX_GPU_DEVICE<int comp>() {
+                    arr_new(i, j, k, comp) =
+                        arr_old(i, j, k, comp) + delta_time * rhs.template operator()<comp>(i, j, k, time_, arr_old);
+                });
             });
         }
     }
