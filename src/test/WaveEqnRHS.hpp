@@ -3,7 +3,8 @@
 // empty example implementation of an RHS, used to test decorator implementations
 
 #include "pde-model/PDEModelConcepts.hpp"
-#include "util/stencil.hpp"
+#include "pde-model/tensor-alias/ScalarAlias.hpp"
+#include "util/tensor_stencil.hpp"
 
 template <int ngrow_> struct WaveEqnRHS {
     static constexpr int ncomp = 2;
@@ -19,11 +20,15 @@ template <int ngrow_> struct WaveEqnRHS {
     template <int comp>
     AMREX_GPU_HOST_DEVICE amrex::Real operator()(int i, int j, int k, amrex::Real time,
                                                  const amrex::Array4<const amrex::Real>& arr) const {
-        if constexpr (comp == Component::phi) {
-            return arr(i, j, k, Component::dphi_dt);
-        } else if constexpr (comp == Component::dphi_dt) {
-            using namespace treesap::stencil;
-            return inv_dx_sq * laplacian<ngrow>(i, j, k, Component::phi, arr);
+        using namespace treesap::stencil;
+
+        treesap::ScalarAlias<0> phi{{arr}};
+        treesap::ScalarAlias<1> pi{{arr}};
+
+        if constexpr (phi.contains(comp)) {
+            return pi(i, j, k);
+        } else if constexpr (pi.contains(comp)) {
+            return inv_dx_sq * laplacian<ngrow>(i, j, k, phi);
         } else {
             return NAN;
         }
