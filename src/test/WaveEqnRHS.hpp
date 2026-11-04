@@ -3,7 +3,7 @@
 // empty example implementation of an RHS, used to test decorator implementations
 
 #include "pde-model/PDEModelConcepts.hpp"
-#include "pde-model/tensor-alias/ScalarAlias.hpp"
+#include "pde-model/tensor-alias/RankNAlias.hpp"
 #include "util/tensor_stencil.hpp"
 
 template <int ngrow_> struct WaveEqnRHS {

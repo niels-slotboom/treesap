@@ -8,10 +8,15 @@ template <int comp_base_, typename ArrayType = const amrex::Real, int dim_ = 3>
 struct SymRank2Alias : public TensorAliasBase<SymRank2Alias<comp_base_, ArrayType, dim_>, comp_base_,
                                               (dim_ * (dim_ + 1)) / 2, 2, dim_, ArrayType> {
 
-    // example:
+    // example 1:
     // 0 1 3
     // 1 2 4
     // 3 4 5
+    // example 2:
+    // 0 1 3 6
+    // 1 2 4 7
+    // 3 4 5 8
+    // 6 7 8 9
     AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE int constexpr get_offset(int a, int b) const {
         int row = (a > b) ? a : b;
         int col = (a > b) ? b : a;
