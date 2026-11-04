@@ -16,9 +16,9 @@ concept TensorAliasImplementation =
         typename std::integral_constant<int, Derived::ncomp>;
         requires Derived::ncomp > 0;
         typename std::integral_constant<int, Derived::rank>;
-        requires Derived::ncomp >= 0;
+        requires Derived::rank >= 0;
         typename std::integral_constant<int, Derived::dim>;
-        requires Derived::ncomp > 0;
+        requires Derived::dim > 0;
     } &&
     []<int... Is>(std::integer_sequence<int, Is...>) {
         return requires(const Derived d) {
@@ -29,17 +29,12 @@ concept TensorAliasImplementation =
         { d.restore_relative(ncomp) } -> std::same_as<amrex::GpuArray<int, Derived::rank>>;
     };
 
-/**
- * @brief Base class for mapping multi-component tensors stored in an AMReX 4D array.
- * @tparam Derived The CRTP derived class implementing index offset logic.
- * @tparam rank_ The rank of the tensor (supports rank 0 for scalars).
- * @tparam ArrayType The data type stored in the array.
- * @tparam dim_ The spatial dimension count.
- */
-template <typename Derived, typename ArrayType> struct TensorAliasBase {
-    static constexpr int ncomp = Derived::ncomp;
-    static constexpr int rank = Derived::rank;
-    static constexpr int dim = Derived::dim;
+template <typename Derived, int comp_base_, int ncomp_, int rank_, int dim_, typename ArrayType>
+struct TensorAliasBase {
+    static constexpr int comp_base = comp_base_; /// Base component index where the contiguous component range starts.
+    static constexpr int ncomp = ncomp_;
+    static constexpr int rank = rank_;
+    static constexpr int dim = dim_;
 
     /**
      * @brief Computes the absolute component index for given tensor indices.
@@ -50,7 +45,7 @@ template <typename Derived, typename ArrayType> struct TensorAliasBase {
     template <typename... TensorIndices>
         requires(sizeof...(TensorIndices) == rank && (std::is_same_v<int, TensorIndices> && ...))
     AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE int constexpr get_comp(TensorIndices... tensor_indices) const {
-        Derived* impl = static_cast<Derived*>(this);
+        const Derived* impl = static_cast<const Derived*>(this);
         if constexpr (rank == 0) {
             return comp_base + impl->get_offset();
         } else {
@@ -91,9 +86,6 @@ template <typename Derived, typename ArrayType> struct TensorAliasBase {
 
     /// Reference to the underlying 4D AMReX array data structure.
     const amrex::Array4<ArrayType>& arr;
-
-    /// Base component index where the contiguous component range starts.
-    const int comp_base = 0;
 };
 
 } // namespace treesap
