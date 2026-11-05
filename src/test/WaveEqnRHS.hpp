@@ -23,7 +23,7 @@ template <int ngrow_> struct WaveEqnRHS {
         using namespace treesap::stencil;
 
         treesap::ScalarAlias<0> phi{{arr}};
-        treesap::ScalarAlias<1> pi{{arr}};
+        treesap::ScalarAlias<phi::next> pi{{arr}};
 
         if constexpr (phi.contains(comp)) {
             return pi(i, j, k);

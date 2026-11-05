@@ -35,6 +35,8 @@ struct TensorAliasBase {
     static constexpr int ncomp = ncomp_;
     static constexpr int rank = rank_;
     static constexpr int dim = dim_;
+    static constexpr int next =
+        comp_base + ncomp_; /// Base component of the next tensor in the 1D AMReX multifab comp list
 
     /**
      * @brief Computes the absolute component index for given tensor indices.
