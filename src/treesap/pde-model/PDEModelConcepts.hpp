@@ -97,6 +97,8 @@ concept PDEModelConcept = requires {
     { m.get_geometry() } -> std::same_as<const amrex::Geometry&>;
 
     { m.get_comp_names() } -> std::convertible_to<amrex::Vector<std::string>>;
+
+    { m.dt_hint() } -> std::convertible_to<amrex::Real>;
 };
 
 } // namespace treesap

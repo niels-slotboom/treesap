@@ -31,9 +31,9 @@ class ABLPDEModel
      * @param abl_data Absorbing boundary layer configuration data.
      * @param init Initial condition object.
      */
-    ABLPDEModel(amrex::Vector<std::string> comp_names, amrex::Geometry geom, RHSType rhs,
+    ABLPDEModel(amrex::Vector<std::string> comp_names, amrex::Geometry geom, amrex::Real dt, RHSType rhs,
                 typename DecoratedRHSType::ABLData abl_data, InitType init)
-        : Base(std::move(comp_names), geom, DecoratedRHSType{std::move(rhs), geom, abl_data}, std::move(init),
+        : Base(std::move(comp_names), geom, dt, DecoratedRHSType{std::move(rhs), geom, abl_data}, std::move(init),
                BCType{abl_data.target_values}) {}
 };
 

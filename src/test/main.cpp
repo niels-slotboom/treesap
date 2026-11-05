@@ -32,7 +32,10 @@ inline auto create_abl_test_model(const amrex::Geometry& geom) {
                                             10.0,                                 // Maximum damping strength
                                             profile};
 
-    return treesap::ABLPDEModel<RHSType, InitType, decltype(profile)>({"phi"}, geom, rhs, abl_data, init);
+    amrex::Real dx = geom.CellSize(0);
+    amrex::Real dt = sqrt(0.5) * dx;
+
+    return treesap::ABLPDEModel<RHSType, InitType, decltype(profile)>({"phi"}, geom, dt, rhs, abl_data, init);
 }
 
 /**
@@ -52,6 +55,7 @@ template <int ngrow> inline auto create_wave_eqn_abl_test_model(const amrex::Geo
                             "- (-0.4))) + 80.42478 * sin(80.42478 * (x - (-0.4))))";
 
     double dx = geom.CellSize(0);
+    amrex::Real dt = sqrt(0.5) * dx;
 
     RHSType rhs(dx);
     InitType init({phi_expr, dphi_expr}); // Initialize field to zero everywhere
@@ -66,7 +70,7 @@ template <int ngrow> inline auto create_wave_eqn_abl_test_model(const amrex::Geo
                                             0.3 / dx, // Maximum damping strength
                                             profile};
 
-    return treesap::ABLPDEModel<RHSType, InitType, decltype(profile)>({"phi", "pi"}, geom, rhs, abl_data, init);
+    return treesap::ABLPDEModel<RHSType, InitType, decltype(profile)>({"phi", "pi"}, geom, dt, rhs, abl_data, init);
 }
 
 int main(int argc, char** argv) {
@@ -86,7 +90,7 @@ int main(int argc, char** argv) {
 
         size_t steps_total = 5000;
         for (size_t step = 0; step <= steps_total; step++) {
-            integrator.step(sqrt(0.5) * geom.CellSize(0));
+            integrator.step();
             amrex::AllPrint() << "step " << step << " done" << std::endl;
         }
     }

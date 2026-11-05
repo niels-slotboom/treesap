@@ -52,11 +52,12 @@ class RK4Integrator : public Integrator<PDEModelType> {
      * @brief Compute the new state using four Runge-Kutta stages.
      * @param delta_time Size of the time step.
      */
-    void computeNewState(amrex::Real delta_time) override {
+    amrex::Real computeNewState(amrex::Real delta_time) override {
         runStage<0>(delta_time);
         runStage<1>(delta_time);
         runStage<2>(delta_time);
         runStage<3>(delta_time);
+        return delta_time;
     }
 
   private: // fused stage kernel

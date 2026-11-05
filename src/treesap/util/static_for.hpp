@@ -4,7 +4,16 @@
 #include <utility>
 
 /**
- * @brief Unrolls a loop at compile time over the half-open interval [Start, End).
+ * @brief Unrolls a loop at compile time over the half-open interval [Start, End). The counter variable is the integer
+ * template argument of template<int i>F.
+ * Example Usage:
+ * static_for<2,5>([=]<int i>(){
+ *   std::cout << "Iteration " << i << " of static_for" << std::endl;
+ * });
+ * This prints:
+ * Iteration 2 of static_for
+ * Iteration 3 of static_for
+ * Iteration 4 of static_for
  */
 template <int Start, int End, typename F> AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE constexpr void static_for(F&& f) {
     static_assert(Start <= End, "Start must be less than or equal to End.");
@@ -14,7 +23,16 @@ template <int Start, int End, typename F> AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVI
 }
 
 /**
- * @brief Unrolls a loop at compile time over the half-open interval [0, End).
+ * @brief Unrolls a loop at compile time over the half-open interval [0, End). The counter variable is the integer
+ * template argument of template<int i>F.
+ * Example Usage:
+ * static_for<3>([=]<int i>(){
+ *   std::cout << "Iteration " << i << " of static_for" << std::endl;
+ * });
+ * This prints:
+ * Iteration 0 of static_for
+ * Iteration 1 of static_for
+ * Iteration 2 of static_for
  */
 template <int End, typename F> AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE constexpr void static_for(F&& f) {
     static_for<0, End>(std::forward<F>(f));

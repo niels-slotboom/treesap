@@ -80,10 +80,9 @@ class Integrator {
     }
 
     /**
-     * @brief Execute one time step.
-     * @param delta_time Size of the time step.
+     * @brief Execute one time step of size model.dt_hint().
      */
-    void step(amrex::Real delta_time) {
+    void step() {
         if (exporter) {
             exporter->exportIfNecessary(steps, time);
         }
@@ -91,7 +90,7 @@ class Integrator {
         ScopedTimer timer("Integrator::step()");
         FillPatch(state_old, time);
 
-        computeNewState(delta_time);
+        amrex::Real delta_time = computeNewState(model.dt_hint());
         std::swap(state_old, state_new);
 
         steps++;
@@ -101,9 +100,11 @@ class Integrator {
   protected:
     /**
      * @brief Compute the new state from the old state.
-     * @param delta_time Size of the time step.
+     * @param dt_hint Size of the time step.
+     * @return Size of the time step that was actually taken. May differ from dt_hint for integrators that dynamically
+     * scale timestep size.
      */
-    virtual void computeNewState(amrex::Real delta_time) = 0;
+    virtual amrex::Real computeNewState(amrex::Real dt_hint) = 0;
 
     /**
      * @brief Fill internal and external boundaries.

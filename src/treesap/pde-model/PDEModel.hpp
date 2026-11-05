@@ -51,13 +51,13 @@ class PDEModel {
      * @param init Initial condition object.
      * @param bc Boundary condition object.
      */
-    PDEModel(amrex::Vector<std::string> comp_names, amrex::Geometry geom, RHSType rhs, InitType init,
+    PDEModel(amrex::Vector<std::string> comp_names, amrex::Geometry geom, amrex::Real dt, RHSType rhs, InitType init,
              BCType bc = BCType{},
              amrex::Vector<amrex::BCRec> bc_recs = amrex::Vector<amrex::BCRec>(
                  ncomp,
                  amrex::BCRec(AMREX_D_DECL(amrex::BCType::int_dir, amrex::BCType::int_dir, amrex::BCType::int_dir),
                               AMREX_D_DECL(amrex::BCType::int_dir, amrex::BCType::int_dir, amrex::BCType::int_dir))))
-        : comp_names(std::move(comp_names)), geom(std::move(geom)), rhs(std::move(rhs)), init(std::move(init)),
+        : comp_names(std::move(comp_names)), geom(std::move(geom)), dt(dt), rhs(std::move(rhs)), init(std::move(init)),
           bc(std::move(bc)), bc_recs(std::move(bc_recs)) {}
 
     /**
@@ -96,6 +96,15 @@ class PDEModel {
      */
     const auto& get_comp_names() const { return comp_names; }
 
+    /**
+     * @brief Get a hint for the timestep dt.
+     * @return The suggested timestep size.
+     * NOTE: The reason this is referred to as a hint is that certain integration schemes like Dormand-Prince scale the
+     * timestep internally. For the TreESaP implementations of Euler and RK4, the dt_hint is used as the timestep width
+     * directly.
+     */
+    amrex::Real dt_hint() const { return dt; }
+
   protected:
     RHSType rhs;                         ///< Right-hand side object.
     InitType init;                       ///< Initial condition object.
@@ -104,6 +113,8 @@ class PDEModel {
 
     amrex::Geometry geom;                  ///< Domain geometry.
     amrex::Vector<std::string> comp_names; ///< Names of the components.
+
+    amrex::Real dt;
 };
 
 static_assert(PDEModelConcept<PDEModel<NoOpRHS<1, 1>, ConstInit<1>>>);

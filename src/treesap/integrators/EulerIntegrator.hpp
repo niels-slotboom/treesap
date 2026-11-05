@@ -35,7 +35,7 @@ class EulerIntegrator : public Integrator<PDEModelType> {
      * @brief Compute the new state with the Euler method.
      * @param delta_time Size of the time step.
      */
-    void computeNewState(amrex::Real delta_time) override {
+    amrex::Real computeNewState(amrex::Real delta_time) override {
         // make local for lambda capture
         RHSType rhs = model.get_rhs();
         amrex::Real time_ = time;
@@ -52,6 +52,8 @@ class EulerIntegrator : public Integrator<PDEModelType> {
                 });
             });
         }
+
+        return delta_time;
     }
 };
 
