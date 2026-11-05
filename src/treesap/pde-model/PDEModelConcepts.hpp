@@ -23,7 +23,9 @@ concept RHSConcept = std::is_trivially_copyable_v<F> && requires {
 } && requires(const F& f, int i, int j, int k, amrex::Real time, const amrex::Array4<const amrex::Real>& arr) {
     // Use a compile-time constant (e.g., 0) as the template argument,
     // assuming components are indexed from 0 up to F::ncomp - 1.
-    { f.template operator()<0>(i, j, k, time, arr) } -> std::convertible_to<amrex::Real>;
+    {
+        f.template operator()<0>(i, j, k, time, arr)
+    } -> std::convertible_to<amrex::Real>; // if this fails, check if operator() is marked const
 };
 
 /**

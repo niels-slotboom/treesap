@@ -8,6 +8,8 @@
 #include <AMReX.H>
 #include <utility>
 
+namespace treesap {
+
 /**
  * @brief Computes the contraction of a callable over the half-open interval [Start, End).
  * @tparam Start Lower bound of the interval (inclusive).
@@ -46,3 +48,4 @@ template <int End, typename F> AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE constexp
 template <typename F> AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE constexpr auto contract(F&& f) {
     return contract<0, 3>(std::forward<F>(f));
 }
+} // namespace treesap

@@ -3,6 +3,8 @@
 #include "AMReX_Gpu.H"
 #include <utility>
 
+namespace treesap {
+
 /**
  * @brief Unrolls a loop at compile time over the half-open interval [Start, End). The counter variable is the integer
  * template argument of template<int i>F.
@@ -37,3 +39,5 @@ template <int Start, int End, typename F> AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVI
 template <int End, typename F> AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE constexpr void static_for(F&& f) {
     static_for<0, End>(std::forward<F>(f));
 }
+
+} // namespace treesap
