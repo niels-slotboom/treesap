@@ -4,35 +4,50 @@
 
 namespace treesap {
 
+/**
+ * @brief Concrete implementation of the CRTP base class TensorAliasBase for a symmetric rank-2 tensor, such as e.g. the
+ * metric or extrinsic curvature. Redundant components are not aliased; only the lower-triangular part is addressed.
+ * @tparam comp_base_ - the first index in the flat component list belonging to the alias
+ * @tparam rank_ - the rank of the tensor, i.e. its index count
+ * @tparam ArrayType - the type of the tensor components; defaults to const amrex::Real
+ * @tparam dim_ - the dimension of the tensor indices, i.e. their value range; defaults to 3
+ */
 template <int comp_base_, typename ArrayType = const amrex::Real, int dim_ = 3>
 struct SymRank2Alias : public TensorAliasBase<SymRank2Alias<comp_base_, ArrayType, dim_>, comp_base_,
                                               (dim_ * (dim_ + 1)) / 2, 2, dim_, ArrayType> {
+    using Base = TensorAliasBase<SymRank2Alias<comp_base_, ArrayType, dim_>, comp_base_, (dim_ * (dim_ + 1)) / 2, 2,
+                                 dim_, ArrayType>;
+    using Base::dim;
+    using Base::ncomp;
+    using Base::rank;
 
-    // example 1:
-    // 0 1 3
-    // 1 2 4
-    // 3 4 5
-    // example 2:
-    // 0 1 3 6
-    // 1 2 4 7
-    // 3 4 5 8
-    // 6 7 8 9
-    AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE int constexpr get_offset(int a, int b) const {
-        int row = (a > b) ? a : b;
-        int col = (a > b) ? b : a;
+    /**
+     * @brief Computes the relative component index corresponding to a given set of tensor indices, respecting the
+     * symmetry; {a, b} and {b, a} lead to the same return value.
+     * @param tensor_indices The tensor indices, each taking a value in the range [0, dim_).
+     * @return The relative component index in the flattened lower-triangular representation.
+     */
+    static AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE constexpr int get_relative(const IndexArray<rank> tensor_indices) {
+        const int a = tensor_indices[0];
+        const int b = tensor_indices[1];
+        const int row = (a > b) ? a : b;
+        const int col = (a > b) ? b : a;
         return (row * (row + 1)) / 2 + col;
     }
 
-    AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE amrex::GpuArray<int, 2> constexpr restore_relative(int rel_comp) const {
+    /**
+     * @brief Restores the tensor indices corresponding to a relative component index, always returning the lower
+     * triangular index pair {a, b}, with a >= b.
+     * @param rel_comp The relative component index in the range [0, (dim_ * (dim_ + 1)) / 2).
+     * @return The corresponding tensor indices, with each index in the range [0, dim_).
+     */
+    static AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE constexpr IndexArray<rank> restore_relative(int rel_comp) {
         int row = 0;
         while ((row + 1) * (row + 2) / 2 <= rel_comp) {
             ++row;
         }
-        int col = rel_comp - (row * (row + 1)) / 2;
+        const int col = rel_comp - (row * (row + 1)) / 2;
         return {row, col};
     }
 };
-
-static_assert(TensorAliasImplementation<SymRank2Alias<0>>);
-
 } // namespace treesap
