@@ -82,7 +82,7 @@ struct TensorAliasBase {
 
     AMREX_FORCE_INLINE
     AMREX_GPU_HOST_DEVICE amrex::GpuArray<int, rank> constexpr restore_absolute(int absolute_comp) const {
-        Derived* impl = static_cast<Derived*>(this);
+        const Derived* impl = static_cast<const Derived*>(this);
         return impl->restore_relative(absolute_comp - comp_base);
     }
 
