@@ -3,10 +3,8 @@
 #include "AMReX_Array4.H"
 #include "AMReX_Extension.H"
 
-#include <array>
 #include <concepts>
 #include <type_traits>
-#include <utility>
 
 #include "IndexArray.hpp"
 
