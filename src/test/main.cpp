@@ -1,97 +1,62 @@
+// AMReX includes
+#include "AMReX_Box.H"
+#include "AMReX_CoordSys.H"
+#include "AMReX_Geometry.H"
+#include "AMReX_RealBox.H"
 #include <AMReX.H>
 #include <AMReX_Print.H>
 
-#include "AMReX_CoordSys.H"
-#include "WaveEqnRHS.hpp"
-#include "init/ConstInit.hpp"
+// TreESaP includes
 #include "init/FunctionInit.hpp"
-#include "integrators/EulerIntegrator.hpp"
 #include "integrators/RK4Integrator.hpp"
 #include "pde-model/ABLPDEModel.hpp"
-#include "pde-model/rhs-decorators/NoOpRHS.hpp"
-#include <AMReX.H>
 
-/**
- * @brief Construct the absorbing boundary layer test model.
- * @return Configured ABLPDEModel instance.
- */
-inline auto create_abl_test_model(const amrex::Geometry& geom) {
-    using RHSType = treesap::NoOpRHS<1, 1>;
-    using InitType = treesap::ConstInit<1>;
-
-    RHSType rhs{};
-    InitType init{0.0}; // Initialize field to zero everywhere
-
-    auto profile = [](amrex::Real s) constexpr {
-        return s * s * (3.0 - 2.0 * s); // Cubic smoothstep profile
-    };
-
-    using DecoratedRHS = treesap::ABLDecorator<RHSType, decltype(profile)>;
-    typename DecoratedRHS::ABLData abl_data{amrex::GpuArray<amrex::Real, 1>{1.0}, // Target value set to 1.0
-                                            16,                                   // Thickness in cells
-                                            10.0,                                 // Maximum damping strength
-                                            profile};
-
-    amrex::Real dx = geom.CellSize(0);
-    amrex::Real dt = sqrt(0.5) * dx;
-
-    return treesap::ABLPDEModel<RHSType, InitType, decltype(profile)>({"phi"}, geom, dt, rhs, abl_data, init);
-}
-
-/**
- * @brief Construct the absorbing boundary layer test model with wave equation RHS.
- * @return Configured ABLPDEModel instance.
- */
-template <int ngrow> inline auto create_wave_eqn_abl_test_model(const amrex::Geometry& geom) {
-    using RHSType = WaveEqnRHS<ngrow>;
-    constexpr int ncomp = RHSType::ncomp;
-    using InitType = treesap::FunctionInit<ncomp>;
-
-    // phi expression (initial position)
-    std::string phi_expr = "exp(-((x - (-0.4))^2 + y^2 + z^2) / 0.045) * cos(80.42478 * (x - (-0.4)))";
-
-    // dt_phi expression (initial velocity for a purely right-moving wave with c = 1)
-    std::string dphi_expr = "exp(-((x - (-0.4))^2 + y^2 + z^2) / 0.045) * (((x - (-0.4)) / 0.0225) * cos(80.42478 * (x "
-                            "- (-0.4))) + 80.42478 * sin(80.42478 * (x - (-0.4))))";
-
-    double dx = geom.CellSize(0);
-    amrex::Real dt = sqrt(0.5) * dx;
-
-    RHSType rhs(dx);
-    InitType init({phi_expr, dphi_expr}); // Initialize field to zero everywhere
-
-    auto profile = [](amrex::Real s) constexpr {
-        return s * s * s * (10.0 - 15 * s + 6 * s * s); // Cubic smoothstep profile
-    };
-
-    using DecoratedRHS = treesap::ABLDecorator<RHSType, decltype(profile)>;
-    typename DecoratedRHS::ABLData abl_data{amrex::GpuArray<amrex::Real, ncomp>{0.0, 0.0},
-                                            64,       // Thickness in cells
-                                            0.3 / dx, // Maximum damping strength
-                                            profile};
-
-    return treesap::ABLPDEModel<RHSType, InitType, decltype(profile)>({"phi", "pi"}, geom, dt, rhs, abl_data, init);
-}
+// our files
+#include "WaveEqnRHS.hpp"
+#include "pde-model/bcs/DirichletBC.hpp"
+#include "pde-model/rhs-decorators/ABLDecorator.hpp"
+#include "util/ScopedTimer.hpp"
 
 int main(int argc, char** argv) {
     amrex::Initialize(argc, argv);
     {
-        amrex::Box dom{{0, 0, 0}, {512, 512, 512}};
-        amrex::RealBox coord_dom{{-2.0, -2.0, -2.0}, {2.0, 2.0, 2.0}};
-        amrex::Geometry geom(dom, coord_dom, amrex::CoordSys::cartesian, {0, 0, 0});
+        // --- set up the domain of the problem ---
+        amrex::Box index_range{{0, 0, 0}, {256, 256, 256}};              // 256³ resolution
+        amrex::RealBox coord_range{{-2.0, -2.0, -2.0}, {2.0, 2.0, 2.0}}; // coordinate domain [-2,2]³
+        int is_per[] = {0, 0, 0};                                        // no periodic boundaries
+        amrex::Geometry geom(index_range, &coord_range, amrex::CoordSys::cartesian, is_per);
 
-        auto model = create_wave_eqn_abl_test_model<2>(geom);
+        // --- simulation parameters ---
+        constexpr int ngrow = 1;
 
-        treesap::RK4Integrator<decltype(model)> integrator(std::move(model), {128, 128, 128});
+        // --- define types for the PDE model ---
+        using RHSType = WaveEqnRHS<ngrow>;                      // our custom wave equation RHS implementation
+        using InitType = treesap::FunctionInit<RHSType::ncomp>; // initialisation with function expressions in strings;
+                                                                // RHS dictates ncomp
+        using BCType = treesap::DirichletBC<RHSType::ncomp,
+                                            RHSType::ngrow>; // Dirichlet boundaries with RHS-dictated ncomp and ngrow
+        using ModelType = treesap::PDEModel<RHSType, InitType, BCType>;
 
-        integrator.initialise();
+        // --- instantiate PDE model ---
+        amrex::Real dx = geom.CellSize(0);
+        amrex::Real dt = std::sqrt(8.0) * dx; // we will use RK4, which at ngrow = 1 has this as a CFL bound
+        RHSType rhs(geom.data());             // RHS of the bulk PDE, without ABL terms
+        InitType init({"exp(-(x^2 + y^2 + z^2)/0.1^2)", "0.0", "0.0", "0.0"}); // functions used to initialise fields
+        BCType bc{0.0, 0.0, 0.0, 0.0};                                         // boundary values set to 0
+        ModelType model({"phi", "u_0", "u_1", "u_2"}, std::move(geom), dt, std::move(rhs), std::move(init),
+                        std::move(bc));
 
-        integrator.configureExporter("raw/test", 20);
+        // --- set up integrator ---
+        treesap::RK4Integrator integrator(std::move(model), {128, 128, 128});
+        integrator.initialise(); // populate initial field values
+        integrator.configureExporter("raw/wave_eqn",
+                                     20);     // configure exports to happen every 20 steps,
+                                              // with plotfiles being saved to ./raw/wave_eqn*
+        treesap::ScopedTimer::enabled = true; // enable simple profiling
 
-        size_t steps_total = 5000;
-        for (size_t step = 0; step <= steps_total; step++) {
+        // --- run integration loop ---
+        for (size_t step = 0; step <= 1000; ++step) {
             integrator.step();
-            amrex::AllPrint() << "step " << step << " done" << std::endl;
         }
     }
     amrex::Finalize();

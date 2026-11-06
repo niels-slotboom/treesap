@@ -1,36 +1,42 @@
 #pragma once
 
-// empty example implementation of an RHS, used to test decorator implementations
-
-#include "pde-model/PDEModelConcepts.hpp"
-#include "pde-model/tensor-alias/RankNAlias.hpp"
-#include "util/tensor_stencil.hpp"
+#include "pde-model/PDEModelConcepts.hpp"        // <-- for RHSConcept
+#include "pde-model/tensor-alias/RankNAlias.hpp" // <-- for ScalarAlias, VectorAlias
+#include "util/tensor_contraction.hpp"           // <-- for contract()
+#include "util/tensor_stencil.hpp"               // <-- for derivative<>()
 
 template <int ngrow_> struct WaveEqnRHS {
-    static constexpr int ncomp = 2;
+    static constexpr int ncomp = 4;
     static constexpr int ngrow = ngrow_;
 
-    enum Component : int { phi = 0, dphi_dt = 1 };
+    amrex::Real dx_inv;
 
-    AMREX_GPU_HOST_DEVICE
-    explicit WaveEqnRHS(amrex::Real dx) : inv_dx_sq(1.0 / (dx * dx)) {}
-
-    amrex::Real inv_dx_sq;
+    AMREX_GPU_HOST_DEVICE explicit WaveEqnRHS(const amrex::GeometryData& geom) : dx_inv(1.0 / geom.CellSize(0)) {}
 
     template <int comp>
-    AMREX_GPU_HOST_DEVICE amrex::Real operator()(int i, int j, int k, amrex::Real time,
-                                                 const amrex::Array4<const amrex::Real>& arr) const {
-        using namespace treesap::stencil;
+    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real operator()(int i, int j, int k, amrex::Real t,
+                                                                    const amrex::Array4<const amrex::Real>& arr) const {
+        // import namespaces for more concise code
+        using namespace treesap;
+        using namespace stencil;
 
-        treesap::ScalarAlias<0> phi{{arr}};
-        treesap::ScalarAlias<phi::next> pi{{arr}};
+        // set up the aliases for field variables:
+        ScalarAlias<0> phi{{arr}};      // component range {0}
+        VectorAlias<phi.next> u{{arr}}; // component range {1,2,3}
+        static_assert(u.next == ncomp); // ensure that we have the correct amount of components
 
-        if constexpr (phi.contains(comp)) {
-            return pi(i, j, k);
-        } else if constexpr (pi.contains(comp)) {
-            return inv_dx_sq * laplacian<ngrow>(i, j, k, phi);
+        // constexpr if to decide which field comp belongs to
+        if constexpr (phi.contains(comp)) {                                                  // phi_rhs implementation
+            return contract([&]<int a>() { return derivative<ngrow, a>(i, j, k, u, {a}); }); // = ∂ₐuᵃ(i,j,k)
+
+        } else if constexpr (u.contains(comp)) { // u_rhs implementation
+            // restore vector index into constexpr int a so we can use it as a template argument
+            constexpr auto restored = u.restore_absolute(comp);
+            constexpr int a = restored[0];
+
+            return derivative<ngrow, a>(i, j, k, phi, {/*no indices*/}); // = ∂ₐφ(i,j,k)
         } else {
-            return NAN;
+            return NAN; // this should never be reached
         }
     }
 };
