@@ -9,7 +9,7 @@
  */
 template <int rank_> struct IndexArray {
     static_assert(rank_ >= 0);
-    int data[rank_ > 0 ? rank_ : 0]{};
+    int data[rank_ > 0 ? rank_ : 1]{};
 
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE constexpr int& operator[](int i) { return data[i]; }
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE constexpr const int& operator[](int i) const { return data[i]; }

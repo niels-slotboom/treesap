@@ -7,7 +7,7 @@
 namespace treesap {
 namespace stencil {
 
-// forwards stencil::derivative (first derivative)
+// forwards to stencil::derivative (first derivative)
 template <int ngrow, int dir, typename Derived>
     requires(TensorAliasImplementation<Derived>)
 AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE auto derivative(int i, int j, int k, const Derived& tensor,
@@ -17,7 +17,7 @@ AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE auto derivative(int i, int j, int k, co
         i, j, k, Derived::Base::get_absolute(tensor_indices), tensor.arr);
 }
 
-// forwards stencil::derivative (second derivative)
+// forwards to stencil::derivative (second derivative)
 template <int ngrow, int dir0, int dir1, typename Derived>
     requires(TensorAliasImplementation<Derived>)
 AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE auto derivative(int i, int j, int k, const Derived& tensor,
@@ -27,7 +27,7 @@ AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE auto derivative(int i, int j, int k, co
         i, j, k, Derived::Base::get_absolute(tensor_indices), tensor.arr);
 }
 
-// forwards stencil::derivative (second derivative)
+// forwards to stencil::derivative (third derivative)
 template <int ngrow, int dir0, int dir1, int dir2, typename Derived>
     requires(TensorAliasImplementation<Derived>)
 AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE auto derivative(int i, int j, int k, const Derived& tensor,

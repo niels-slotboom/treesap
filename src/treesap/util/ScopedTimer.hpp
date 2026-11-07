@@ -1,8 +1,11 @@
 #pragma once
 
+#include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <iomanip>
 #include <iostream>
+#include <sstream>
 #include <string>
 #include <unordered_map>
 
@@ -51,22 +54,31 @@ class ScopedTimer {
                   << "StdDev: " << formatDuration(stdev_duration) << " (" << stats.count << " runs)\n";
     }
 
+    /**
+     * @brief Prints a sorted profiling overview table with left-aligned timer names and clean spacing.
+     */
     static void printOverview() {
         std::cout << "--- --- --- ScopedTimer Profiling Overview --- --- ---" << std::endl;
-        for (const auto& [name, stats] : totals_counts) {
+
+        std::vector<std::pair<std::string, TimerStats>> sorted_entries(totals_counts.begin(), totals_counts.end());
+
+        std::ranges::sort(sorted_entries, [](const auto& a, const auto& b) {
+            return a.second.total_duration > b.second.total_duration;
+        });
+
+        for (const auto& [name, stats] : sorted_entries) {
             Duration avg_duration = stats.total_duration / stats.count;
 
-            // compute standard deviation in microseconds
             double mean_us = std::chrono::duration<double, std::micro>(stats.total_duration).count() / stats.count;
             double variance_us = (stats.sum_squares_us / stats.count) - (mean_us * mean_us);
             double stdev_us = variance_us > 0.0 ? std::sqrt(variance_us) : 0.0;
             auto stdev_duration = std::chrono::duration<double, std::micro>(stdev_us);
 
-            std::cout << "[Timer: " << name << "] "
-                      << "Executions: \t" << stats.count << " | "
-                      << "Total: \t" << formatDuration(stats.total_duration) << " | "
-                      << "Avg: \t" << formatDuration(avg_duration) << " | "
-                      << "StdDev: \r" << formatDuration(stdev_duration) << std::endl;
+            std::cout << "[Timer: " << std::left << std::setw(35) << name << "] " << std::right
+                      << "Executions: " << std::setw(6) << stats.count << " | "
+                      << "Total: " << std::setw(8) << formatDuration(stats.total_duration) << " | "
+                      << "Avg: " << std::setw(8) << formatDuration(avg_duration) << " | "
+                      << "StdDev: " << std::setw(9) << formatDuration(stdev_duration) << std::endl;
         }
     }
 
@@ -74,19 +86,21 @@ class ScopedTimer {
     std::string timer_name;
     TimePoint start;
 
-    /// @brief Convert any duration to a readable text string using micro, milli, or second units.
+    /// @brief Convert any duration to a readable text string using micro, milli, or second units with one decimal
+    /// place.
     template <typename Rep, typename Period> static std::string formatDuration(std::chrono::duration<Rep, Period> d) {
         auto duration_ms = std::chrono::duration<double, std::milli>(d).count();
+        std::ostringstream oss;
+        oss << std::fixed << std::setprecision(1);
 
         if (duration_ms < 1.0) {
-            auto duration_us = std::chrono::duration<double, std::micro>(d).count();
-            return std::to_string(duration_us) + " µs";
+            oss << std::chrono::duration<double, std::micro>(d).count() << " \u00b5s";
         } else if (duration_ms >= 1000.0) {
-            auto duration_s = std::chrono::duration<double>(d).count();
-            return std::to_string(duration_s) + " s";
+            oss << std::chrono::duration<double>(d).count() << " s";
         } else {
-            return std::to_string(duration_ms) + " ms";
+            oss << duration_ms << " ms";
         }
+        return oss.str();
     }
 
     inline static std::unordered_map<std::string, TimerStats> totals_counts;
