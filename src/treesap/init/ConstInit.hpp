@@ -4,7 +4,7 @@
 namespace treesap {
 
 /**
- * @brief Sets all components to a constant value.
+ * @brief InitConcept-satisfying functor which sets all components to a constant value.
  * @tparam ncomp_ Number of components to initialize.
  */
 template <int ncomp_> struct ConstInit {

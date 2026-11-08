@@ -4,7 +4,7 @@
 #include <AMReX.H>
 
 namespace treesap {
-// constexpr math (to be evaluated at compile time)
+/// Implements math functions that can be evaluated at compile time.
 namespace cexprmath {
 /// Computes the factorial of n.
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE constexpr std::int64_t factorial(int n) {

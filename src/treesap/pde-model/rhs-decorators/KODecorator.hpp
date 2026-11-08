@@ -7,7 +7,7 @@
 namespace treesap {
 
 /**
- * @brief Add Kreiss-Oliger dissipation to a right-hand side model.
+ * @brief Adds Kreiss-Oliger dissipation to a right-hand side model through a decorator pattern.
  * @tparam RHSType Underlying right-hand side model type.
  * @tparam isotropic Use isotropic Laplacian power ngrow stencil when true.
  *                   Note: For ngrow greater than 1, this increases memory reads due to large stencil size.

@@ -47,6 +47,7 @@ class PDEModel {
      * @brief Initialize the model container.
      * @param comp_names Names of the components.
      * @param geom Domain geometry.
+     * @param dt Time step width.
      * @param rhs Right-hand side object.
      * @param init Initial condition object.
      * @param bc Boundary condition object.

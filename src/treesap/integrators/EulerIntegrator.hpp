@@ -6,7 +6,7 @@
 namespace treesap {
 
 /**
- * @brief Implement the Euler time integration scheme.
+ * @brief RHSConcept-satifying implementation of the forward Euler time integration scheme.
  * @tparam PDEModelType Type of the PDE model.
  */
 template <typename PDEModelType>

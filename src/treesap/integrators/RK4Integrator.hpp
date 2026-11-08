@@ -5,7 +5,7 @@
 namespace treesap {
 
 /**
- * @brief Implements the Runge-Kutta 4 time integration scheme.
+ * @brief RHSConcept-satifying implementation of the the Runge-Kutta 4 time integration scheme.
  * @tparam PDEModelType Type of the PDE model.
  */
 template <typename PDEModelType>

@@ -17,7 +17,7 @@
 namespace treesap {
 
 /**
- * @brief Manage time integration for a PDE model.
+ * @brief Manages time integration for a PDE model.
  * @tparam PDEModelType Type of the PDE model.
  */
 template <typename PDEModelType>

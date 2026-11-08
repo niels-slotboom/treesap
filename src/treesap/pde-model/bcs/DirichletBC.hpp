@@ -4,7 +4,7 @@
 namespace treesap {
 
 /**
- * @brief Implements (constant) Dirichlet boundary conditions.
+ * @brief BCConcept-satisfying implementation of (constant) Dirichlet boundary conditions.
  * @tparam ncomp_ Number of components.
  * @tparam ngrow_ Number of ghost cells.
  */

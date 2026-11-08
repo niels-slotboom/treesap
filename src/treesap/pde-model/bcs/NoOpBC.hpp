@@ -4,7 +4,7 @@
 namespace treesap {
 
 /**
- * @brief Implements an empty boundary condition.
+ * @brief BCConcept-satisfying implementation of empty boundary conditions. When called, this functor does nothing.
  * @tparam ncomp_ Number of components.
  * @tparam ngrow_ Number of ghost cells.
  */

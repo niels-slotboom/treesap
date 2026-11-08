@@ -27,6 +27,7 @@ class ABLPDEModel
      * @brief Initialize the absorbing boundary layer model.
      * @param comp_names Names of the components.
      * @param geom Domain geometry.
+     * @param dt Time step width.
      * @param rhs Right-hand side model object.
      * @param abl_data Absorbing boundary layer configuration data.
      * @param init Initial condition object.

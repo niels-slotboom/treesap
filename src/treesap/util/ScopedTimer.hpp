@@ -11,20 +11,32 @@
 
 namespace treesap {
 
+/**
+ * @brief RAII-based timer which measures execution time of scopes and tracks aggregated statistics.
+ */
 class ScopedTimer {
     using Duration = std::chrono::steady_clock::duration;
     using TimePoint = std::chrono::steady_clock::time_point;
 
-    /// @brief Holds accumulated timing statistics for a named timer.
+    /**
+     * @brief Holds accumulated timing statistics for a named timer.
+     */
     struct TimerStats {
-        Duration total_duration{0};
-        double sum_squares_us = 0.0;
-        size_t count = 0;
+        Duration total_duration{0};  ///< Cumulative duration across all runs.
+        double sum_squares_us = 0.0; ///< Sum of squared durations in microseconds for variance computation.
+        size_t count = 0;            ///< Total number of executions.
     };
 
   public:
+    /**
+     * @brief Initializes a timer with a name and records the start time.
+     * @param name Unique identifier for the timer.
+     */
     explicit ScopedTimer(std::string name) : timer_name(std::move(name)), start(std::chrono::steady_clock::now()) {}
 
+    /**
+     * @brief Measures elapsed time on scope exit, updates statistics, and prints run details.
+     */
     ~ScopedTimer() {
         if (!enabled)
             return;
@@ -83,11 +95,17 @@ class ScopedTimer {
     }
 
   private:
-    std::string timer_name;
-    TimePoint start;
+    std::string timer_name; ///< Name assigned to the current timer instance.
+    TimePoint start;        ///< Start time point of the current timer instance.
 
-    /// @brief Convert any duration to a readable text string using micro, milli, or second units with one decimal
-    /// place.
+    /**
+     * @brief Converts any duration to a readable text string using micro, milli, or second units with one decimal
+     * place.
+     * @tparam Rep Arithmetic type representing the number of ticks.
+     * @tparam Period A std::ratio representing the tick period.
+     * @param d Duration value to format.
+     * @return Formatted string representation of the duration.
+     */
     template <typename Rep, typename Period> static std::string formatDuration(std::chrono::duration<Rep, Period> d) {
         auto duration_ms = std::chrono::duration<double, std::milli>(d).count();
         std::ostringstream oss;
@@ -103,10 +121,11 @@ class ScopedTimer {
         return oss.str();
     }
 
-    inline static std::unordered_map<std::string, TimerStats> totals_counts;
+    inline static std::unordered_map<std::string, TimerStats>
+        totals_counts; ///< Global map storing aggregated statistics for all timers.
 
   public:
-    inline static bool enabled = false;
+    inline static bool enabled = false; ///< Global switch to enable or disable timer logging and collection.
 };
 
 } // namespace treesap

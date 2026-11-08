@@ -12,7 +12,7 @@
 namespace treesap {
 
 /**
- * @brief Initializes components using string expressions parsed at run time.
+ * @brief InitConcept-satisfying functor which initialises components using string expressions parsed at run time.
  * @tparam ncomp_ Number of components to initialize.
  *
  * @details This class is designed to be trivially copyable so it can be passed directly
@@ -61,9 +61,8 @@ template <int ncomp_> struct FunctionInit {
      * @param comp Component index.
      * @return Evaluated real value.
      */
-    template<int comp>
-    AMREX_GPU_HOST_DEVICE
-    amrex::Real operator()(amrex::Real x, amrex::Real y, amrex::Real z) const {
+    template <int comp>
+    AMREX_GPU_HOST_DEVICE amrex::Real operator()(amrex::Real x, amrex::Real y, amrex::Real z) const {
         return executors[comp](x, y, z);
     }
 
