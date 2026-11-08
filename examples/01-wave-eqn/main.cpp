@@ -4,18 +4,16 @@
 #include "AMReX_Geometry.H"
 #include "AMReX_RealBox.H"
 #include <AMReX.H>
-#include <AMReX_Print.H>
 
 // TreESaP includes
 #include "init/FunctionInit.hpp"
 #include "integrators/RK4Integrator.hpp"
-#include "pde-model/ABLPDEModel.hpp"
+#include "pde-model/PDEModel.hpp"
+#include "pde-model/bcs/DirichletBC.hpp"
+#include "util/ScopedTimer.hpp"
 
 // our files
 #include "WaveEqnRHS.hpp"
-#include "pde-model/bcs/DirichletBC.hpp"
-#include "pde-model/rhs-decorators/ABLDecorator.hpp"
-#include "util/ScopedTimer.hpp"
 
 int main(int argc, char** argv) {
     amrex::Initialize(argc, argv);
@@ -29,7 +27,7 @@ int main(int argc, char** argv) {
         // --- simulation parameters ---
         constexpr int ngrow = 1;
         amrex::Real dx = geom.CellSize(0);
-        amrex::Real dt = std::sqrt(8.0) * dx; // we will use RK4, which at ngrow = 1 has this as a CFL bound in 3d
+        amrex::Real dt = std::sqrt(8.0 / 3.0) * dx; // we will use RK4, which at ngrow = 1 has this as a CFL bound in 3d
 
         // --- define types for the PDE model ---
         using RHSType = WaveEqnRHS<ngrow>;                      // our custom wave equation RHS implementation
@@ -47,15 +45,15 @@ int main(int argc, char** argv) {
                         std::move(bc));
 
         // --- set up integrator ---
-        treesap::RK4Integrator integrator(std::move(model), {128, 128, 128});
+        treesap::RK4Integrator<ModelType> integrator(std::move(model), {128, 128, 128});
         integrator.initialise(); // populate initial field values
         integrator.configureExporter("raw/wave_eqn",
-                                     20);     // configure exports to happen every 20 steps,
+                                     2);      // configure exports to happen every 2 steps,
                                               // with plotfiles being saved to ./raw/wave_eqn*
         treesap::ScopedTimer::enabled = true; // enable simple profiling
 
         // --- run integration loop ---
-        for (size_t step = 0; step <= 2500; ++step) {
+        for (size_t step = 0; step <= 70; ++step) {
             integrator.step();
         }
 

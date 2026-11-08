@@ -2,7 +2,7 @@
 
 #include "pde-model/PDEModelConcepts.hpp"        // <-- for RHSConcept
 #include "pde-model/tensor-alias/RankNAlias.hpp" // <-- for ScalarAlias, VectorAlias
-#include "util/tensor_contraction.hpp"           // <-- for contract()
+#include "util/tensor_operations.hpp"            // <-- for contract()
 #include "util/tensor_stencil.hpp"               // <-- for derivative<>()
 
 template <int ngrow_> struct WaveEqnRHS {
