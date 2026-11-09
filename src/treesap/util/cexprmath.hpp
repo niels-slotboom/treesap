@@ -84,10 +84,11 @@ AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE constexpr int sign(int k) { return (k &
  * @param k The exponent of the reciprocal integers.
  * @return The generalised harmonic number \f$H_{n,m}\f$.
  * @note This function is `constexpr` evaluable.
+ *
  * The generalised harmonic numbers are defined as
- * \f$$
+ * \f[
  *      H_{n,m} = \sum_{k=1}^n \frac{1}{k^m}.
- * \f$$
+ * \f]
  */
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE constexpr double generalised_harmonic_number(int n, int m) {
     double sum = 0.0;
