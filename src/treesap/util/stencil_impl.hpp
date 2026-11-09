@@ -40,8 +40,8 @@ namespace weights {
  * The evaluated expression is
  * \f[
  *      \begin{cases}
- *           0, & p = 0,\\
- *           \frac{(-1)^{p+1}(n!)^2}{p(n-p)!(n+p)!},&\quad p \neq 0,\\
+ *           0, & p = 0,\\ \\
+ *           \displaystyle\frac{(-1)^{p+1}(n!)^2}{p(n-p)!(n+p)!},&\quad p \neq 0,\\
  *      \end{cases}
  * \f]
  * where \f$n=\f$`ngrow` and \f$p=\f$`offset`.
@@ -64,7 +64,7 @@ template <int ngrow> AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE constexpr amrex::R
 }
 
 /**
- * @brief Implements weights for unmixed second-order derivative stencils with width `2 * ngrow + 1`, at offset away
+ * @brief Implements weights for unmixed second-order derivative stencils with width `2 * ngrow + 1`, at `offset` away
  * from center point.
  * @tparam ngrow The amount of neighbours in either direction; the stencil width is `2 * ngrow + 1`, centered around
  * `offset = 0`.
@@ -74,11 +74,12 @@ template <int ngrow> AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE constexpr amrex::R
  * The evaluated expression is
  * \f[
  *      \begin{cases}
- *           -2 H_{n,2}, & p = 0,\\
- *           \frac{2(-1)^{p+1}(n!)^2}{p^2(n-p)!(n+p)!},&\quad p \neq 0,\\
+ *           -2 H_{n,2}, & p = 0,\\ \\
+ *           \displaystyle\frac{2(-1)^{p+1}(n!)^2}{p^2(n-p)!(n+p)!},&\quad p \neq 0,\\
  *      \end{cases}
  * \f]
- * where \f$n=\f$`ngrow` and \f$p=\f$`offset`.
+ * where \f$n=\f$`ngrow`, \f$p=\f$`offset` and \f$H_{n,m}\f$ are the generalised harmonic numbers (see @ref
+ * treesap::cexprmath::generalised_harmonic_number).
  */
 template <int ngrow> AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE constexpr amrex::Real second(int offset) {
     static_assert(ngrow > 0, "ngrow needs to be at least 1 to evaluate second derivatives");
@@ -96,8 +97,8 @@ template <int ngrow> AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE constexpr amrex::R
 }
 
 /**
- * @brief Implements weights for unmixed third-order derivative stencils with width `2 * ngrow + 1`, at offset away from
- * center point.
+ * @brief Implements weights for unmixed third-order derivative stencils with width `2 * ngrow + 1`, at `offset` away
+ * from center point.
  * @tparam ngrow The amount of neighbours in either direction; the stencil width is `2 * ngrow + 1`, centered around
  * `offset = 0`.
  * @param offset The offset away from the central cell.
@@ -106,11 +107,12 @@ template <int ngrow> AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE constexpr amrex::R
  * The evaluated expression is
  * \f[
  *      \begin{cases}
- *           0, & p = 0,\\
- *           \frac{3!(-1)^{p+1}(n!)^2}{p^3(n-p)!(n+p)!}(1-p^2 H_{n,2}),&\quad p \neq 0,\\
+ *           0, & p = 0,\\ \\
+ *           \displaystyle\frac{3!(-1)^{p+1}(n!)^2}{p^3(n-p)!(n+p)!}(1-p^2 H_{n,2}),&\quad p \neq 0,\\
  *      \end{cases}
  * \f]
- * where \f$n=\f$`ngrow` and \f$p=\f$`offset`.
+ * where \f$n=\f$`ngrow` and \f$p=\f$`offset` and \f$H_{n,m}\f$ are the generalised harmonic numbers (see @ref
+ * treesap::cexprmath::generalised_harmonic_number).
  */
 template <int ngrow> AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE constexpr amrex::Real third(int offset) {
     static_assert(ngrow > 1, "ngrow needs to be at least 2 to evaluate third derivatives");
@@ -226,8 +228,8 @@ template <int ngrow, typename ArrayType, int dir0, int dir1> struct derivative_i
      * @param k Third cell index.
      * @param comp One-dimensional index of the MultiFab component.
      * @param arr Reference to the array to evaluate stencil on.
-     * @return Finite-difference stencil approximation of the second derivative of `arr[comp]` along `dir0,dir1` at
-     * `(i,j,k)`.
+     * @return Finite-difference stencil approximation of the second derivative of `arr[comp]` along `dir0, dir1` at
+     * `(i, j, k)`.
      *
      * The implementation of derivative stencils is deferred to this struct template because function templates do not
      * allow partial template specialisation.
@@ -286,8 +288,9 @@ struct derivative_impl<ngrow, ArrayType, dir0, dir1, dir2> {
      * @param k Third cell index.
      * @param comp One-dimensional index of the MultiFab component.
      * @param arr Reference to the array to evaluate stencil on.
-     * @return Finite-difference stencil approximation of the third derivative of `arr[comp]` along `dir0,dir1,dir2` at
-     * `(i,j,k)`.
+     * @return Finite-difference stencil approximation of the third derivative of `arr[comp]` along `dir0, dir1, dir2`
+     * at
+     * `(i, j, k)`.
      *
      * The implementation of derivative stencils is deferred to this struct template because function templates do not
      * allow partial template specialisation.
