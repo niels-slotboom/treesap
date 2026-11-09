@@ -14,6 +14,10 @@
 #include <AMReX_MultiFab.H>
 #include <AMReX_PhysBCFunct.H>
 
+/**
+ * @namespace treesap
+ * @brief Contains all of the infrastructre provided by the TreESaP library.
+ */
 namespace treesap {
 
 /**
