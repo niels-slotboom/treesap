@@ -12,10 +12,19 @@
 #include <string>
 #include <unordered_map>
 
+#include <AMReX_Print.H>
+
 namespace treesap {
 
 /**
  * @brief RAII-based timer which measures execution time of scopes and tracks aggregated statistics.
+ *
+ * `ScopedTimer` is meant to be instantiated with a `std::string` timer name, causing it to store the current time as
+ * the scope start time. Its destruction marks the stop time, which triggers the computation of the scope duration, the
+ * printing of diagnostics, and the logging of aggregate statistics under the same timer name. At any time, the
+ * aggregate statistics can be printed to `amrex::AllPrint()` as a sorted overview.
+ *
+ * The static member `ScopedTimer::enabled` dictates whether the above behaviour is enabled or disabled.
  */
 class ScopedTimer {
     using Duration = std::chrono::steady_clock::duration;
@@ -38,7 +47,7 @@ class ScopedTimer {
     explicit ScopedTimer(std::string name) : timer_name(std::move(name)), start(std::chrono::steady_clock::now()) {}
 
     /**
-     * @brief Measures elapsed time on scope exit, updates statistics, and prints run details.
+     * @brief Measures elapsed time on scope exit, updates aggregate statistics, and prints run details.
      */
     ~ScopedTimer() {
         if (!enabled)
@@ -62,18 +71,21 @@ class ScopedTimer {
         auto stdev_duration = std::chrono::duration<double, std::micro>(stdev_us);
 
         // print formatted summary including standard deviation
-        std::cout << "[Timer: " << timer_name << "] "
-                  << "Run: " << formatDuration(elapsed) << " | "
-                  << "Total: " << formatDuration(stats.total_duration) << " | "
-                  << "Avg: " << formatDuration(avg_duration) << " | "
-                  << "StdDev: " << formatDuration(stdev_duration) << " (" << stats.count << " runs)\n";
+        amrex::AllPrint() << "[Timer: " << timer_name << "] "
+                          << "Run: " << formatDuration(elapsed) << " | "
+                          << "Total: " << formatDuration(stats.total_duration) << " | "
+                          << "Avg: " << formatDuration(avg_duration) << " | "
+                          << "StdDev: " << formatDuration(stdev_duration) << " (" << stats.count << " runs)\n";
     }
 
     /**
      * @brief Prints a sorted profiling overview table with left-aligned timer names and clean spacing.
+     *
+     * The overview lists the total execution count, total execution time, average execution time and standard deviation
+     * of each named timer that was used one or multiple times up to the point of calling `printOverview()`.
      */
     static void printOverview() {
-        std::cout << "--- --- --- ScopedTimer Profiling Overview --- --- ---" << std::endl;
+        amrex::AllPrint() << "--- --- --- ScopedTimer Profiling Overview --- --- ---" << std::endl;
 
         std::vector<std::pair<std::string, TimerStats>> sorted_entries(totals_counts.begin(), totals_counts.end());
 
