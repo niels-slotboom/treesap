@@ -9,18 +9,26 @@
 namespace treesap {
 
 /**
- * @brief Unrolls a loop at compile time over the half-open interval [Start, End). The counter variable is the integer
- * template argument of template<int i>F.
+ * @brief Unrolls a loop at compile time over the half-open interval `[Start, End)`.
+ * @tparam Start Inclusive lower bound of the loop index.
+ * @tparam End Exclusive lower bound of the loop index.
+ * @tparam F Callable type templated on the loop index integer, typically a lambda template `[]<int i>(){...}`.
+ * @param f Instance of F.
+ *
+ * The counter variable is the integer template argument of `template<int i>F`.
+ *
  * Example Usage:
  * @code
  * static_for<2,5>([=]<int i>(){
  *   std::cout << "Iteration " << i << " of static_for" << std::endl;
  * });
  * @endcode
- * This prints:
- * Iteration 2 of static_for
- * Iteration 3 of static_for
- * Iteration 4 of static_for
+ * This unrolls to:
+ * @code
+ * std::cout << "Iteration " << 2 << " of static_for" << std::endl;
+ * std::cout << "Iteration " << 3 << " of static_for" << std::endl;
+ * std::cout << "Iteration " << 4 << " of static_for" << std::endl;
+ * @endcode
  */
 template <int Start, int End, typename F> AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE constexpr void static_for(F&& f) {
     static_assert(Start <= End, "Start must be less than or equal to End.");
@@ -30,18 +38,25 @@ template <int Start, int End, typename F> AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVI
 }
 
 /**
- * @brief Unrolls a loop at compile time over the half-open interval [0, End). The counter variable is the integer
- * template argument of template<int i>F.
+ * @brief Unrolls a loop at compile time over the half-open interval `[0, End)`.
+ * @tparam End Exclusive lower bound of the loop index.
+ * @tparam F Callable type templated on the loop index integer, typically a lambda template `[]<int i>(){...}`.
+ * @param f Instance of F.
+ *
+ * The counter variable is the integer template argument of `template<int i>F`.
+ *
  * Example Usage:
  * @code
  * static_for<3>([=]<int i>(){
  *   std::cout << "Iteration " << i << " of static_for" << std::endl;
  * });
  * @endcode
- * This prints:
- * Iteration 0 of static_for
- * Iteration 1 of static_for
- * Iteration 2 of static_for
+ * This unrolls to:
+ * @code
+ * std::cout << "Iteration " << 0 << " of static_for" << std::endl;
+ * std::cout << "Iteration " << 1 << " of static_for" << std::endl;
+ * std::cout << "Iteration " << 2 << " of static_for" << std::endl;
+ * @endcode
  */
 template <int End, typename F> AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE constexpr void static_for(F&& f) {
     static_for<0, End>(std::forward<F>(f));
