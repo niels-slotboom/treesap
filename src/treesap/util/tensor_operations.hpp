@@ -16,7 +16,7 @@
 namespace treesap {
 
 /**
- * @brief Computes the contraction of a callable over the half-open interval [Start, End).
+ * @brief Computes the tensor contraction of a callable over the half-open interval [Start, End).
  * @tparam Start Lower bound of the interval (inclusive).
  * @tparam End Upper bound of the interval (exclusive).
  * @tparam F Callable type with an operator() templated over a single integer index.
@@ -35,7 +35,7 @@ template <int Start, int End, typename F> AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLI
 }
 
 /**
- * @brief Computes the contraction of a callable over the half-open interval [0, End).
+ * @brief Computes the tensor contraction of a callable over the half-open interval [0, End).
  * @tparam End Upper bound of the interval (exclusive).
  * @tparam F Callable type with an operator() templated over a single integer index.
  * @param f Callable object to evaluate at each index. Must expose an single integer template parameter which is summed
@@ -47,7 +47,7 @@ template <int End, typename F> AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE constexp
 }
 
 /**
- * @brief Computes the contraction of a callable over the half-open interval [0, 3).
+ * @brief Computes the tensor contraction of a callable over the half-open interval [0, 3).
  * @tparam F Callable type with an operator() templated over a single integer index.
  * @param f Callable object to evaluate at each index. Must expose an single integer template parameter which is summed
  * over; this function sums f<0>() + f<1>() + f<2>()
@@ -58,7 +58,7 @@ template <typename F> AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE constexpr auto co
 }
 
 /**
- * @brief Symmetrizes f over two indices at a and b.
+ * @brief Symmetrizes `f<a,b>` over the indices `a` and `b`.
  * @tparam a First index value.
  * @tparam b Second index value.
  * @tparam F Callable type with operator template over two integer indices.
@@ -71,14 +71,14 @@ template <typename F> AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE constexpr auto co
  *     return tensor(a_, b_);
  * });
  * @endcode
- * Expands to 1/2 * (tensor(a,b) + tensor(b,a))
+ * Expands to `1/2 * (tensor(a,b) + tensor(b,a))`
  */
 template <int a, int b, typename F> AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE constexpr auto symmetrise(F&& f) {
     return 0.5 * (f.template operator()<a, b>() + f.template operator()<b, a>());
 }
 
 /**
- * @brief Anti-symmetrizes f over two indices at a and b.
+ * @brief Anti-symmetrizes `f<a,b>` over the indices `a` and `b`.
  * @tparam a First index value.
  * @tparam b Second index value.
  * @tparam F Callable type with operator template over two integer indices.
@@ -90,8 +90,8 @@ template <int a, int b, typename F> AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE con
  * auto result = antisymmetrise<a, b>([&]<int a_, int b_>() {
  *     return tensor(a_, b_);
  * });
- * Expands to 1/2 * (tensor(a,b) - tensor(b,a))
  * @endcode
+ * Expands to `1/2 * (tensor(a,b) - tensor(b,a))`
  */
 template <int a, int b, typename F> AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE constexpr auto antisymmetrise(F&& f) {
     if constexpr (a == b) // dont waste memory IO and compute if indices are the same
@@ -161,7 +161,7 @@ AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE constexpr auto antisymmetrise(F&& f) {
  *     return tensor(a_, b_, c_);
  * });
  * @endcode
- * Expands to 1/3 * (tensor(a,b,c) + tensor(b,c,a) + tensor(c,a,b))
+ * Expands to `1/3 * (tensor(a,b,c) + tensor(b,c,a) + tensor(c,a,b))`
  */
 template <int a, int b, int c, typename F>
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE constexpr auto cyclic_permutation_sum(F&& f) {
