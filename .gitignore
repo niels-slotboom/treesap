@@ -3,3 +3,5 @@
 /bin/
 /raw/
 Backtrace.*
+/doc/html/
+/doc/latex/

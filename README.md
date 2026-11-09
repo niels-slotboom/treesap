@@ -1,4 +1,7 @@
-# TreESaP
+@mainpage TreESaP: Tremendously Efficient Sandbox for PDEs
+
+
+# TreESaP Library
 
 TreESaP is a C++20 header-only library for defining and evolving explicit partial differential equation (PDE) systems on structured grids using AMReX. It separates a PDE model's right-hand side, initial conditions, boundary conditions and metadata from the time-integration scheme.
 

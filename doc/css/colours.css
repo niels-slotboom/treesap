@@ -1,0 +1,32 @@
+/* colours.css */
+html {
+    /* Light mode equivalents based on VS Code Dark 2026 / custom orange */
+    --primary-color: #ed8e45;
+    --primary-dark-color: #a2683c;
+    --primary-light-color: #f4b27d;
+    
+    --page-background-color: #ffffff;
+    --content-background-color: #ffffff;
+    --page-foreground-color: #2f4153;
+    --page-secondary-foreground-color: #6f7e8e;
+    
+    --fragment-background: #F8F9FA;
+    --fragment-foreground: #37474F;
+}
+
+@media (prefers-color-scheme: dark) {
+    html:not(.light-mode) {
+        /* VS Code Dark 2026 palette mapping */
+        --primary-color: #ed8e45;
+        --primary-dark-color: #b56c33;
+        --primary-light-color: #f7ca9a;
+        
+        --page-background-color: #121314;
+        --content-background-color: #191a1b;
+        --page-foreground-color: #cccccc;
+        --page-secondary-foreground-color: #858585;
+        
+        --fragment-background: #1e1e1e;
+        --fragment-foreground: #d4d4d4;
+    }
+}
