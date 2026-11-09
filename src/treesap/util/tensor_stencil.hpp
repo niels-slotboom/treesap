@@ -4,7 +4,7 @@
 #pragma once
 
 #include "pde-model/tensor-alias/TensorAliasBase.hpp"
-#include "stencil.hpp"
+#include "stencil_impl.hpp"
 
 // this file provides forwards/wrappers for stencil.hpp functions that can be used with TensorAliasBase implementations
 namespace treesap {
@@ -16,7 +16,7 @@ template <int ngrow, int dir, typename Derived>
 AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE auto derivative(int i, int j, int k, const Derived& tensor,
                                                          const IndexArray<Derived::rank>& tensor_indices) {
 
-    return derivative_impl<ngrow, typename Derived::Base::arr_t, dir>::eval(
+    return stencil_impl::derivative_impl<ngrow, typename Derived::Base::arr_t, dir>::eval(
         i, j, k, Derived::Base::get_absolute(tensor_indices), tensor.arr);
 }
 
@@ -26,7 +26,7 @@ template <int ngrow, int dir0, int dir1, typename Derived>
 AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE auto derivative(int i, int j, int k, const Derived& tensor,
                                                          const IndexArray<Derived::rank>& tensor_indices) {
 
-    return derivative_impl<ngrow, typename Derived::Base::arr_t, dir0, dir1>::eval(
+    return stencil_impl::derivative_impl<ngrow, typename Derived::Base::arr_t, dir0, dir1>::eval(
         i, j, k, Derived::Base::get_absolute(tensor_indices), tensor.arr);
 }
 
@@ -36,7 +36,7 @@ template <int ngrow, int dir0, int dir1, int dir2, typename Derived>
 AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE auto derivative(int i, int j, int k, const Derived& tensor,
                                                          const IndexArray<Derived::rank>& tensor_indices) {
 
-    return derivative_impl<ngrow, typename Derived::Base::arr_t, dir0, dir1, dir2>::eval(
+    return stencil_impl::derivative_impl<ngrow, typename Derived::Base::arr_t, dir0, dir1, dir2>::eval(
         i, j, k, Derived::Base::get_absolute(tensor_indices), tensor.arr);
 }
 
