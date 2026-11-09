@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MPL-2.0
+// Copyright (c) 2026 Niels Slotboom
+
 #pragma once
 
 #include "AMReX_Gpu.H"
@@ -9,9 +12,11 @@ namespace treesap {
  * @brief Unrolls a loop at compile time over the half-open interval [Start, End). The counter variable is the integer
  * template argument of template<int i>F.
  * Example Usage:
+ * @code
  * static_for<2,5>([=]<int i>(){
  *   std::cout << "Iteration " << i << " of static_for" << std::endl;
  * });
+ * @endcode
  * This prints:
  * Iteration 2 of static_for
  * Iteration 3 of static_for
@@ -28,9 +33,11 @@ template <int Start, int End, typename F> AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVI
  * @brief Unrolls a loop at compile time over the half-open interval [0, End). The counter variable is the integer
  * template argument of template<int i>F.
  * Example Usage:
+ * @code
  * static_for<3>([=]<int i>(){
  *   std::cout << "Iteration " << i << " of static_for" << std::endl;
  * });
+ * @endcode
  * This prints:
  * Iteration 0 of static_for
  * Iteration 1 of static_for

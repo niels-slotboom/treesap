@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MPL-2.0
+// Copyright (c) 2026 Niels Slotboom
+
 #pragma once
 #include "AMReX_Array4.H"
 #include "AMReX_MFIter.H"
