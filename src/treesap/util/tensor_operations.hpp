@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: MPL-2.0
 // Copyright (c) 2026 Niels Slotboom
 
-#pragma once
-
 /**
  * @file
- * @brief Provides constexpr contraction and index symmetrization utilities for tensor calculus operations in AMReX.
+ * @brief Provides constexpr contraction and index symmetrization utilities for tensor calculus operations.
  */
 
 #pragma once
@@ -100,7 +98,7 @@ template <int a, int b, typename F> AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE con
 }
 
 /**
- * @brief Symmetrizes f over three indices at a, b, and c.
+ * @brief Symmetrizes `f<a, b, c>` over the three indices `a`, `b`, and `c`.
  * @tparam a First index value.
  * @tparam b Second index value.
  * @tparam c Third index value.
@@ -122,7 +120,7 @@ template <int a, int b, int c, typename F> AMREX_GPU_HOST_DEVICE AMREX_FORCE_INL
 }
 
 /**
- * @brief Anti-symmetrizes f over three indices at a, b, and c.
+ * @brief Anti-symmetrizes `f<a, b, c>` over the three indices `a`, `b`, and `c`.
  * @tparam a First index value.
  * @tparam b Second index value.
  * @tparam c Third index value.

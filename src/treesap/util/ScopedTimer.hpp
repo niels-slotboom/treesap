@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: MPL-2.0
 // Copyright (c) 2026 Niels Slotboom
 
+/**
+ * @file
+ * @brief Provides an RAII-based scope timer and performance statistics aggregator for AMReX.
+ */
+
 #pragma once
 
 #include <algorithm>

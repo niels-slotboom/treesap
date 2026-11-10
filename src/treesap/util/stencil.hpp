@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: MPL-2.0
 // Copyright (c) 2026 Niels Slotboom
 
+/**
+ * @file
+ * @brief Provides finite-difference derivative stencils and Kreiss-Oliger dissipation operators for AMReX arrays.
+ */
+
 #pragma once
 #include <AMReX.H>
 #include <AMReX_Array.H>
@@ -20,7 +25,7 @@ namespace treesap {
  */
 namespace stencil {
 /**
- * @brief Evaluates a centered derivative stencil.
+ * @brief Evaluates a centered derivative stencil on a raw `amrex::Array4`.
  * @tparam ngrow Amount of neighbours in either direction; the stencil width is `2 * ngrow + 1`.
  * @tparam ArrayType Type of the data stored in the `arr` argument.
  * @tparam Dirs... Up to three directions along which derivatives are approximated.
@@ -33,8 +38,9 @@ namespace stencil {
  * @param comp Component index in the MultiFab component range.
  * @param arr Reference to the array to evaluate stencil on.
  * @return A finite-difference approximation of \f$\Delta x \partial_a
- * \,\verb|arr|(\verb|i, j, k|)\f$, \f$\Delta x^2 \partial_a \partial_b
- * \,\verb|arr|(\verb|i, j, k|)\f$ or \f$\Delta x^3 \partial_a \partial_b \partial_c\,\verb|arr|(\verb|i, j, k|)\f$.
+ * \,\verb|arr|(\verb|i, j, k, comp|)\f$, \f$\Delta x^2 \partial_a \partial_b
+ * \,\verb|arr|(\verb|i, j, k, comp|)\f$ or \f$\Delta x^3 \partial_a \partial_b \partial_c\,\verb|arr|(\verb|i, j, k,
+ * comp|)\f$.
  *
  * The stencil width is `2 * ngrow + 1`, and requires `arr` to provide `ngrow` ghost cells. The number of directions
  * provided in `int... Dir` defines the derivative order; up to third derivatives are implemented. For implementation
@@ -49,7 +55,7 @@ AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE ArrayType derivative(int i, int j, int 
 }
 
 /**
- * @brief Evaluates a centered derivative stencil.
+ * @brief Evaluates a centered derivative stencil on a raw `amrex::Array4`.
  * @tparam ngrow Amount of neighbours in either direction; the stencil width is `2 * ngrow + 1`.
  * @tparam ArrayType Type of the data stored in the `arr` argument.
  * @tparam Dirs... Up to three directions along which derivatives are approximated.
@@ -60,8 +66,8 @@ AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE ArrayType derivative(int i, int j, int 
  * @param comp Component index in the MultiFab component range.
  * @param arr Reference to the array to evaluate stencil on.
  * @return A finite-difference approximation of \f$\Delta x \partial_a
- * \,\verb|arr|(\verb|idx|)\f$, \f$\Delta x^2 \partial_a \partial_b
- * \,\verb|arr|(\verb|idx|)\f$ or \f$\Delta x^3 \partial_a \partial_b \partial_c\,\verb|arr|(\verb|idx|)\f$.
+ * \,\verb|arr|(\verb|idx, comp|)\f$, \f$\Delta x^2 \partial_a \partial_b
+ * \,\verb|arr|(\verb|idx, comp|)\f$ or \f$\Delta x^3 \partial_a \partial_b \partial_c\,\verb|arr|(\verb|idx, comp|)\f$.
  *
  * The stencil width is `2 * ngrow + 1`, and requires `arr` to provide `ngrow` ghost cells. The number of directions
  * provided in `int... Dir` defines the derivative order; up to third derivatives are implemented. For implementation
@@ -89,7 +95,7 @@ AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE ArrayType derivative(amrex::IntVect idx
  * @param k Third center cell index.
  * @param comp Component index in the MultiFab component range.
  * @param arr Reference to the array to evaluate stencil on.
- * @return Value of the KO operator evaluation \f$\Delta x \mathcal{D}_\text{KO}\verb|arr|(\verb|i, j, k|)\f$.
+ * @return Value of the KO operator evaluation \f$\Delta x \mathcal{D}_\text{KO}\verb|arr|(\verb|i, j, k, comp|)\f$.
  *
  * The stencil width is `2 * ngrow + 1`, and requires `arr` to provide `ngrow` ghost cells. In this context, the
  * Kreiss-Oliger dissipation term of order \f$r = \verb|ngrow|\f$ is normalised as

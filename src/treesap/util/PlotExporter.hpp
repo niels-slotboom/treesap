@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: MPL-2.0
 // Copyright (c) 2026 Niels Slotboom
 
+/**
+ * @file
+ * @brief Provides the PlotExporter class for periodic AMReX plot file exports.
+ */
+
 #pragma once
 
 #include "AMReX.H"

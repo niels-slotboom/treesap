@@ -1,6 +1,12 @@
 // SPDX-License-Identifier: MPL-2.0
 // Copyright (c) 2026 Niels Slotboom
 
+/**
+ * @file
+ * @brief Provides compile-time evaluable mathematical utilities, including factorials, binomial coefficients, and
+ * generalised harmonic numbers.
+ */
+
 #pragma once
 
 #include "AMReX_REAL.H"

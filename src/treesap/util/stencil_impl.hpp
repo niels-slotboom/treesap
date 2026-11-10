@@ -1,6 +1,12 @@
 // SPDX-License-Identifier: MPL-2.0
 // Copyright (c) 2026 Niels Slotboom
 
+/**
+ * @file
+ * @brief Provides private implementations for compile-time unrolled finite-difference stencil weights and derivative
+ * operators for AMReX arrays.
+ */
+
 #pragma once
 #include <AMReX.H>
 #include <AMReX_Array.H>
@@ -222,7 +228,7 @@ template <int ngrow, typename ArrayType, int dir> struct derivative_impl<ngrow, 
  */
 template <int ngrow, typename ArrayType, int dir0, int dir1> struct derivative_impl<ngrow, ArrayType, dir0, dir1> {
     /**
-     * @brief SCompile-time unrolled second-order derivative evaluation function.
+     * @brief Compile-time unrolled second-order derivative evaluation function.
      * @param i First cell index.
      * @param j Second cell index.
      * @param k Third cell index.
@@ -275,7 +281,7 @@ template <int ngrow, typename ArrayType, int dir0, int dir1> struct derivative_i
  * @tparam dir0 First derivative direction.
  * @tparam dir1 Second derivative direction.
  * @tparam dir2 Third derivative direction.
-
+ *
  * The implementation of derivative stencils is deferred to this struct template because function templates do not
  * allow partial template specialisation.
  */

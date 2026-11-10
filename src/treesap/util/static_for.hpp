@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: MPL-2.0
 // Copyright (c) 2026 Niels Slotboom
 
+/**
+ * @file
+ * @brief Provides compile-time loop unrolling utilities for AMReX kernels and constexpr execution.
+ */
+
 #pragma once
 
 #include "AMReX_Gpu.H"
