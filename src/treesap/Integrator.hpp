@@ -3,7 +3,7 @@
 
 /**
  * @file
- * @brief Provides the `treesap::Integrator` base class.
+ * @brief Provides the `treesap::Integrator` base class template.
  */
 
 #pragma once
@@ -29,12 +29,12 @@
 namespace treesap {
 
 /**
- * @brief Semi-virtual class managing time integration for a PDE model.
+ * @brief Semi-virtual class template managing time integration for a PDE model.
  * @tparam PDEModelType Type of the PDE model.
  *
- * Implementers of this class must implement `computeNewState` which must populate `Integrator::state_new` by employing
- * a time integration scheme, using as input `Integrator::state_old`. The `Integrator::FillPatch` may be used to fill
- * ghost cells of `MultiFab`s according to the boundary conditions supplied to `Integrator::model`.
+ * Implementers of this class template must implement `computeNewState` which must populate `Integrator::state_new` by
+ * employing a time integration scheme, using as input `Integrator::state_old`. The `Integrator::FillPatch` may be used
+ * to fill ghost cells of `MultiFab`s according to the boundary conditions supplied to `Integrator::model`.
  */
 template <typename PDEModelType>
     requires PDEModelConcept<PDEModelType>

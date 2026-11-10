@@ -1,5 +1,9 @@
 // SPDX-License-Identifier: MPL-2.0
 // Copyright (c) 2026 Niels Slotboom
+/**
+ * @file
+ * @brief Provides the C++ concepts which define the PDE model interface used by the time integration abstraction.
+ */
 
 #pragma once
 
@@ -14,7 +18,7 @@
 namespace treesap {
 
 /**
- * @brief Verifies that a type evaluates the spatial right-hand side operator.
+ * @brief Verifies that a type represents a spatial right-hand side operator.
  * @tparam F Type to check against the concept.
  */
 template <typename F>

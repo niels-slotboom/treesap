@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: MPL-2.0
 // Copyright (c) 2026 Niels Slotboom
 
+/**
+ * @file
+ * @brief Provides the `treesap::ABLPDEModel` class template.
+ */
+
 #pragma once
 
 #include "PDEModel.hpp"
@@ -12,10 +17,14 @@
 namespace treesap {
 
 /**
- * @brief Define a PDE model with an absorbing boundary layer decorator.
- * @tparam RHSType Right-hand side model type.
- * @tparam InitType Initial condition model type.
+ * @brief Defines a PDE model with an absorbing boundary layer (ABL) decorator.
+ * @tparam RHSType Undecorated right-hand side functor type.
+ * @tparam InitType Initial condition functor type.
  * @tparam ABLProfileType Absorbing boundary layer profile type.
+ * @note The `RHSType` template parameter should be *undecorated*; this class template handles the ABL decoration
+ * internally.
+ *
+ * For ABL implementation details, see `treesap::ABLDecorator`.
  */
 template <typename RHSType, typename InitType, typename ABLProfileType>
 class ABLPDEModel

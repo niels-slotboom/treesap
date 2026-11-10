@@ -14,8 +14,8 @@ namespace treesap {
 
 namespace tensor {
 /**
- * @brief Concrete implementation of the CRTP base class `treesap::tensor::TensorAliasBase` for a symmetric rank-2
- * tensor, such as e.g. the metric or extrinsic curvature. Redundant components are not aliased; only the
+ * @brief Concrete implementation of the CRTP base class template `treesap::tensor::TensorAliasBase` for a symmetric
+ * rank-2 tensor, such as e.g. the metric or extrinsic curvature. Redundant components are not aliased; only the
  * lower-triangular part is addressed.
  * @tparam comp_base_ First index in MultiFab component range belonging to the alias
  * @tparam dim_ Dimension of the tensor indices, i.e. their value range; defaults to 3

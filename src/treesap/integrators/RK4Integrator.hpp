@@ -14,7 +14,7 @@ namespace treesap {
 
 /**
  * @brief Concrete `Integrator` implementation for the classical fourth-order Runge-Kutta (RK4) scheme.
- * @tparam PDEModelType Type of the PDE model to be forwarded to the base class `Integrator`.
+ * @tparam PDEModelType Type of the PDE model to be forwarded to the base class template`Integrator`.
  *
  * For a PDE of the form
  * \f[

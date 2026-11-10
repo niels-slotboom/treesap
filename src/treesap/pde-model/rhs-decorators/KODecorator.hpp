@@ -20,7 +20,8 @@ namespace treesap {
  * @tparam order_ The order of the Kreiss-Oliger terms; Defaults to `RHSType::ngrow`.
  * @note Satisfies `treesap::RHSConcept`.
  *
- * Concretely, the decoration wraps the original RHS \f$F = \verb|rhs|\f$ as
+ * Concretely, given a dissipation strength \f$\kappa>0\f$, the decoration wraps the original RHS \f$F = \verb|rhs|\f$
+ * as
  * \f[
  *      F(\Phi,t) \rightarrow F(\Phi,t) + \kappa (\mathcal{D}_\text{KO}^x \Phi + \mathcal{D}_\text{KO}^y \Phi +
  * \mathcal{D}_\text{KO}^z \Phi)

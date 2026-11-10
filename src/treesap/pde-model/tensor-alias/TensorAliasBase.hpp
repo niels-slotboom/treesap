@@ -25,7 +25,7 @@ namespace treesap {
 namespace tensor {
 
 /**
- * @brief Concept that a derived class @tparam Derived must satisfy to inherit from TensorAliasBase.
+ * @brief Concept that a derived class Derived must satisfy to inherit from TensorAliasBase.
  *
  * The following properties are checked:
  * - Must provide a `Derived::Base` type alias for the `treesap::tensor::TensorAliasBase` class
@@ -59,7 +59,7 @@ concept TensorAliasImplementation = requires { // check for ncomp, rank, dim
 };
 
 /**
- * @brief CRTP Base class for aliasing a tensor onto a MultiFab component range
+ * @brief CRTP Base class template for aliasing a tensor onto a MultiFab component range
  * @tparam Derived Type of the implementing class
  * @tparam comp_base_ First index in the MultiFab component range belonging to the alias
  * @tparam ncomp_ Number of components being aliased

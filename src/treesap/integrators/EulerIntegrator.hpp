@@ -15,7 +15,7 @@ namespace treesap {
 
 /**
  * @brief Concrete `Integrator` implementation for the forward Euler scheme.
- * @tparam PDEModelType Type of the PDE model to be forwarded to the base class `Integrator`.
+ * @tparam PDEModelType Type of the PDE model to be forwarded to the base class template `Integrator`.
  *
  * For a PDE of the form
  * \f[
