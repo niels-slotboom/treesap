@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: MPL-2.0
 // Copyright (c) 2026 Niels Slotboom
 
+/**
+ * @file
+ * @brief Implements the `treesap::FunctionInit` class for `std::string` math expression based initialisation.
+ */
+
 #pragma once
 #include "../pde-model/PDEModelConcepts.hpp"
 
@@ -17,6 +22,7 @@ namespace treesap {
 /**
  * @brief InitConcept-satisfying functor which initialises components using string expressions parsed at run time.
  * @tparam ncomp_ Number of components to initialize.
+ * @note Satisfies `treesap::InitConcept`.
  *
  * @details This class is designed to be trivially copyable so it can be passed directly
  *          into GPU kernels (e.g., via `amrex::ParallelFor`). Because an
@@ -58,10 +64,10 @@ template <int ncomp_> struct FunctionInit {
 
     /**
      * @brief Device-friendly call operator (evaluates the compiled parser executor).
-     * @param x X coordinate.
-     * @param y Y coordinate.
-     * @param z Z coordinate.
-     * @param comp Component index.
+     * @param x \f$x\f$-coordinate.
+     * @param y \f$y\f$-coordinate.
+     * @param z \f$z\f$-coordinate.
+     * @param comp Component index in the MultiFab component range.
      * @return Evaluated real value.
      */
     template <int comp>

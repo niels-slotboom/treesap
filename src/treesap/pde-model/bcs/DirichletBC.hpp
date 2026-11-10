@@ -1,15 +1,22 @@
 // SPDX-License-Identifier: MPL-2.0
 // Copyright (c) 2026 Niels Slotboom
 
+/**
+ * @file
+ * @brief Provides the `treesap::DirichletBC` class, which implements constant Dirichlet boundary conditions,
+ * \f$\Phi|_{\partial\Omega} = \text{const}\f$.
+ */
+
 #pragma once
 #include "../PDEModelConcepts.hpp"
 
 namespace treesap {
 
 /**
- * @brief BCConcept-satisfying implementation of (constant) Dirichlet boundary conditions.
+ * @brief Constant Dirichlet boundary conditions.
  * @tparam ncomp_ Number of components.
  * @tparam ngrow_ Number of ghost cells.
+ * @note Satisfies `treesap::BCConcept`.
  */
 template <int ncomp_, int ngrow_> struct DirichletBC {
     /// Number of components.

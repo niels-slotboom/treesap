@@ -1,15 +1,23 @@
 // SPDX-License-Identifier: MPL-2.0
 // Copyright (c) 2026 Niels Slotboom
 
+/**
+ * @file
+ * @brief Provides the `treesap::NoOpBC` class, which implements no-op boundary conditions.
+ */
+
 #pragma once
 #include "../PDEModelConcepts.hpp"
 
 namespace treesap {
 
 /**
- * @brief BCConcept-satisfying implementation of empty boundary conditions. When called, this functor does nothing.
+ * @brief Implementation of empty boundary conditions.
  * @tparam ncomp_ Number of components.
  * @tparam ngrow_ Number of ghost cells.
+ * @note Satisfies `treesap::BCConcept`.
+ *
+ * When called, this functor does nothing.
  */
 template <int ncomp_, int ngrow_> struct NoOpBC {
     /// Number of components.
@@ -19,7 +27,7 @@ template <int ncomp_, int ngrow_> struct NoOpBC {
     static constexpr int ngrow = ngrow_;
 
     /**
-     * @brief Applies the boundary condition.
+     * @brief Does nothing.
      * @param iv Grid cell index.
      * @param dest Destination array view.
      * @param dcomp Destination component index.
