@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: MPL-2.0
 // Copyright (c) 2026 Niels Slotboom
 
+/**
+ * @file
+ * @brief Provides the concrete `treesap::RK4Integrator` implementation of `treesap::Integrator`.
+ */
+
 #pragma once
 #include "AMReX_MFIter.H"
 #include "Integrator.hpp"
@@ -8,8 +13,26 @@
 namespace treesap {
 
 /**
- * @brief RHSConcept-satifying implementation of the the Runge-Kutta 4 time integration scheme.
- * @tparam PDEModelType Type of the PDE model.
+ * @brief Concrete `Integrator` implementation for the classical fourth-order Runge-Kutta (RK4) scheme.
+ * @tparam PDEModelType Type of the PDE model to be forwarded to the base class `Integrator`.
+ *
+ * For a PDE of the form
+ * \f[
+ *     \partial_t \Phi = F(\Phi,t),
+ * \f]
+ * with \f$F = \verb|model.get_rhs()|\f$, the classical fourth-order Runge-Kutta scheme evaluates four stages per step:
+ * \f[
+ *     \begin{aligned}
+ *         k_1 &= F(\Phi^n, t^n), \\
+ *         k_2 &= F\left(\Phi^n + \frac{\Delta t}{2} k_1, t^n + \frac{\Delta t}{2}\right), \\
+ *         k_3 &= F\left(\Phi^n + \frac{\Delta t}{2} k_2, t^n + \frac{\Delta t}{2}\right), \\
+ *         k_4 &= F(\Phi^n + \Delta t \, k_3, t^n + \Delta t),
+ *     \end{aligned}
+ * \f]
+ * and combines them via the update equation
+ * \f[
+ *     \Phi^{n+1} = \Phi^n + \frac{\Delta t}{6} \left( k_1 + 2k_2 + 2k_3 + k_4 \right).
+ * \f]
  */
 template <typename PDEModelType>
     requires PDEModelConcept<PDEModelType>
@@ -54,6 +77,20 @@ class RK4Integrator : public Integrator<PDEModelType> {
     /**
      * @brief Compute the new state using four Runge-Kutta stages.
      * @param delta_time Size of the time step.
+     *
+     * The update equation is
+     * \f[
+     *     \Phi^{n+1} = \Phi^n + \frac{\Delta t}{6} \left( k_1 + 2k_2 + 2k_3 + k_4 \right).
+     * \f]
+     * with \f$\Phi^n = \verb|state_old|\f$, \f$\Phi^{n+1} = \verb|state_new|\f$, and
+     * \f[
+     *     \begin{aligned}
+     *         k_1 &= F(\Phi^n, t^n), \\
+     *         k_2 &= F\left(\Phi^n + \frac{\Delta t}{2} k_1, t^n + \frac{\Delta t}{2}\right), \\
+     *         k_3 &= F\left(\Phi^n + \frac{\Delta t}{2} k_2, t^n + \frac{\Delta t}{2}\right), \\
+     *         k_4 &= F(\Phi^n + \Delta t \, k_3, t^n + \Delta t).
+     *     \end{aligned}
+     * \f]
      */
     amrex::Real computeNewState(amrex::Real delta_time) override {
         runStage<0>(delta_time);
@@ -68,6 +105,12 @@ class RK4Integrator : public Integrator<PDEModelType> {
      * @brief Execute a single integration stage.
      * @tparam stage_number Index of the current stage.
      * @param dt Size of the time step.
+     *
+     * Computes the stage increment $k_i$ for stage $i$ using the update formula
+     * \f[
+     *     \Phi^{(i)} = \Phi^n + \Delta t \sum_{j=1}^{i-1} a_{ij} k_j,
+     * \f]
+     * evaluates $k_i = F(\Phi^{(i)}, t^n + c_i \Delta t)$, and accumulates it into the final state register.
      */
     template <int stage_number> void runStage(amrex::Real dt) {
         constexpr bool is_first = (stage_number == 0);

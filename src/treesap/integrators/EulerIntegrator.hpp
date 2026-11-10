@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: MPL-2.0
 // Copyright (c) 2026 Niels Slotboom
 
+/**
+ * @file
+ * @brief Provides the concrete `treesap::EulerIntegrator` implementation of `treesap::Integrator`.
+ */
+
 #pragma once
 #include "AMReX_Array4.H"
 #include "AMReX_MFIter.H"
@@ -9,8 +14,17 @@
 namespace treesap {
 
 /**
- * @brief RHSConcept-satifying implementation of the forward Euler time integration scheme.
- * @tparam PDEModelType Type of the PDE model.
+ * @brief Concrete `Integrator` implementation for the forward Euler scheme.
+ * @tparam PDEModelType Type of the PDE model to be forwarded to the base class `Integrator`.
+ *
+ * For a PDE of the form
+ * \f[
+ *      \partial_t \Phi = F(\Phi,t),
+ * \f]
+ * with $F = \verb|model.get_rhs()|$, the forward Euler scheme prescribes the update equation
+ * \f[
+ *      \verb|state_new| = \verb|state_old| + \verb|dt_hint| \cdot F(\verb|state_old|,t).
+ * \f]
  */
 template <typename PDEModelType>
     requires PDEModelConcept<PDEModelType>
@@ -37,6 +51,12 @@ class EulerIntegrator : public Integrator<PDEModelType> {
     /**
      * @brief Compute the new state with the Euler method.
      * @param delta_time Size of the time step.
+     *
+     * The update equation is
+     * \f[
+     *      \verb|state_new| = \verb|state_old| + \verb|dt_hint| \cdot F(\verb|state_old|,t),
+     * \f]
+     * where $F = \verb|model.get_rhs()|$.
      */
     amrex::Real computeNewState(amrex::Real delta_time) override {
         // make local for lambda capture

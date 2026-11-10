@@ -1,3 +1,11 @@
+// SPDX-License-Identifier: MPL-2.0
+// Copyright (c) 2026 Niels Slotboom
+
+/**
+ * @file
+ * @brief Provides the `treesap::Integrator` base class.
+ */
+
 #pragma once
 
 #include "pde-model/PDEModelConcepts.hpp"
@@ -21,8 +29,12 @@
 namespace treesap {
 
 /**
- * @brief Manages time integration for a PDE model.
+ * @brief Semi-virtual class managing time integration for a PDE model.
  * @tparam PDEModelType Type of the PDE model.
+ *
+ * Implementers of this class must implement `computeNewState` which must populate `Integrator::state_new` by employing
+ * a time integration scheme, using as input `Integrator::state_old`. The `Integrator::FillPatch` may be used to fill
+ * ghost cells of `MultiFab`s according to the boundary conditions supplied to `Integrator::model`.
  */
 template <typename PDEModelType>
     requires PDEModelConcept<PDEModelType>
@@ -61,6 +73,8 @@ class Integrator {
 
     /**
      * @brief Initialize the state container using the initial condition functor.
+     *
+     * The `model.get_init()` functor is used to populate each cell of the `state_old` `amrex::MultiFab`.
      */
     void initialise() {
         ScopedTimer timer("Integrator::initialise()");
@@ -84,7 +98,12 @@ class Integrator {
     }
 
     /**
-     * @brief Execute one time step of size model.dt_hint().
+     * @brief Execute one time step.
+     *
+     * @note The timestep width passed to the inheriting class' implementation of `computeNewState()` is
+     * `model.dt_hint()`. For typical `Integrator` implementations such as `EulerIntegrator` and `RK4Integrator`, this
+     * is the width of the step that is actually taken; for adaptive timestepping schemes such as Dormand-Prince, the
+     * actual step width taken may differ from `model.dt_hint()`.
      */
     void step() {
         if (exporter) {
@@ -104,9 +123,12 @@ class Integrator {
   protected:
     /**
      * @brief Compute the new state from the old state.
-     * @param dt_hint Size of the time step.
+     * @param dt_hint Suggested size of the time step.
      * @return Size of the time step that was actually taken. May differ from dt_hint for integrators that dynamically
      * scale timestep size.
+     * @note For typical `Integrator` implementations such as `EulerIntegrator` and `RK4Integrator`, `dt_hint`
+     * is the width of the step that is actually taken; for adaptive timestepping schemes such as Dormand-Prince, the
+     * actual step width taken may differ from `model.dt_hint()`.
      */
     virtual amrex::Real computeNewState(amrex::Real dt_hint) = 0;
 
@@ -114,6 +136,9 @@ class Integrator {
      * @brief Fill internal and external boundaries.
      * @param mf MultiFab to fill.
      * @param time_ Current simulation time.
+     *
+     * This method internally calls `amrex::FillPatchSingleLevel` to fill internal boundaries by halo exchange and
+     * external boundaries using the boundary condition functor of the PDE model, `model.get_bc()`.
      */
     void FillPatch(amrex::MultiFab& mf, amrex::Real time_) {
         ScopedTimer timer("Integrator::FillPatch()");
@@ -146,11 +171,11 @@ class Integrator {
     amrex::BoxArray ba;            ///< Box array for domain partition.
     amrex::DistributionMapping dm; ///< Distribution mapping for processes.
 
-    amrex::MultiFab state_old; ///< State at the current time level.
-    amrex::MultiFab state_new; ///< State at the new time level.
+    amrex::MultiFab state_old; ///< State at the current time step.
+    amrex::MultiFab state_new; ///< State at the new time step.
 
-    size_t steps = 0;       ///< Number of completed time steps.
-    amrex::Real time = 0.0; ///< Current simulation time.
+    size_t steps = 0;       ///< Number of completed time steps, corresponds to `state_old`.
+    amrex::Real time = 0.0; ///< Current simulation time, corresponds to `state_old`.
   private:
     std::optional<PlotExporter> exporter = std::nullopt; ///< Exporter instance.
 };
