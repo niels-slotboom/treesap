@@ -6,6 +6,8 @@
 #include "AMReX.H"
 
 namespace treesap {
+
+namespace tensor {
 /**
  * @brief Small helper struct to contain tensor index arrays.
  * @note This is necessary because amrex::GpuArray does not allow constexpr operator[], and std::array is not
@@ -18,4 +20,6 @@ template <int rank_> struct IndexArray {
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE constexpr int& operator[](int i) { return data[i]; }
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE constexpr const int& operator[](int i) const { return data[i]; }
 };
+} // namespace tensor
+
 } // namespace treesap

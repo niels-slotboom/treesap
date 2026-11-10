@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: MPL-2.0
 // Copyright (c) 2026 Niels Slotboom
 
+/**
+ * @file
+ * @brief Provides the concrete implementation `treesap::tensor::RankNAlias` of `treesap::tensor::TensorAliasBase`.
+ */
+
 #pragma once
 
 #include "TensorAliasBase.hpp"
@@ -8,18 +13,21 @@
 
 namespace treesap {
 
+namespace tensor {
+
 /**
- * @brief Concrete implementation of the CRTP base class TensorAliasBase for a general tensor of arbitrary @tparam rank_
- * without any symmetries.
- * @tparam comp_base_ - the first index in the flat component list belonging to the alias
- * @tparam rank_ - the rank of the tensor, i.e. its index count
- * @tparam ArrayType - the type of the tensor components; defaults to const amrex::Real
- * @tparam dim_ - the dimension of the tensor indices, i.e. their value range; defaults to 3
+ * @brief Concrete implementation of the CRTP base class `treesap::tensor::TensorAliasBase` for a general tensor of
+ * arbitrary `rank_` without any symmetries.
+ * @tparam comp_base_ First index in MultiFab component range belonging to the alias
+ * @tparam rank_ Rank of the tensor, i.e. its index count
+ * @tparam dim_ Dimension of the tensor indices, i.e. their value range; defaults to 3
+ * @tparam ArrayType Type of the tensor components; defaults to `const amrex::Real`
+ * @note Satisfies the `concept` `treesap::tensor::TensorAliasImplementation`.
  */
-template <int comp_base_, int rank_, typename ArrayType = const amrex::Real, int dim_ = 3>
-struct RankNAlias : public TensorAliasBase<RankNAlias<comp_base_, rank_, ArrayType, dim_>, comp_base_,
+template <int comp_base_, int rank_, int dim_ = 3, typename ArrayType = const amrex::Real>
+struct RankNAlias : public TensorAliasBase<RankNAlias<comp_base_, rank_, dim_, ArrayType>, comp_base_,
                                            cexprmath::power(dim_, rank_), rank_, dim_, ArrayType> {
-    using Base = TensorAliasBase<RankNAlias<comp_base_, rank_, ArrayType, dim_>, comp_base_,
+    using Base = TensorAliasBase<RankNAlias<comp_base_, rank_, dim_, ArrayType>, comp_base_,
                                  cexprmath::power(dim_, rank_), rank_, dim_, ArrayType>;
     using Base::dim;
     using Base::ncomp;
@@ -60,23 +68,23 @@ struct RankNAlias : public TensorAliasBase<RankNAlias<comp_base_, rank_, ArrayTy
 
 /// @brief Alias for a rank-0 (scalar) tensor
 template <int comp_base_, typename ArrayType = const amrex::Real, int dim_ = 3>
-using ScalarAlias = RankNAlias<comp_base_, 0, ArrayType, dim_>;
+using ScalarAlias = RankNAlias<comp_base_, 0, dim_, ArrayType>;
 
 /// @brief Alias for a rank-1 (vector) tensor
 template <int comp_base_, typename ArrayType = const amrex::Real, int dim_ = 3>
-using VectorAlias = RankNAlias<comp_base_, 1, ArrayType, dim_>;
+using VectorAlias = RankNAlias<comp_base_, 1, dim_, ArrayType>;
 
 /// @brief Alias for a rank-2 tensor
 template <int comp_base_, typename ArrayType = const amrex::Real, int dim_ = 3>
-using Rank2Alias = RankNAlias<comp_base_, 2, ArrayType, dim_>;
+using Rank2Alias = RankNAlias<comp_base_, 2, dim_, ArrayType>;
 
 /// @brief Alias for a rank-3 tensor
 template <int comp_base_, typename ArrayType = const amrex::Real, int dim_ = 3>
-using Rank3Alias = RankNAlias<comp_base_, 3, ArrayType, dim_>;
+using Rank3Alias = RankNAlias<comp_base_, 3, dim_, ArrayType>;
 
 /// @brief Alias for a rank-4 tensor
 template <int comp_base_, typename ArrayType = const amrex::Real, int dim_ = 3>
-using Rank4Alias = RankNAlias<comp_base_, 4, ArrayType, dim_>;
+using Rank4Alias = RankNAlias<comp_base_, 4, dim_, ArrayType>;
 
 // test a few cases
 static_assert(TensorAliasImplementation<ScalarAlias<0>>);
@@ -85,5 +93,7 @@ static_assert(TensorAliasImplementation<Rank2Alias<0>>);
 static_assert(TensorAliasImplementation<Rank3Alias<0>>);
 static_assert(TensorAliasImplementation<Rank4Alias<0>>);
 static_assert(TensorAliasImplementation<RankNAlias<0, 5>>);
+
+} // namespace tensor
 
 } // namespace treesap

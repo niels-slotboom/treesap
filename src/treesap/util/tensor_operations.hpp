@@ -13,6 +13,8 @@
 
 namespace treesap {
 
+namespace tensor {
+
 /**
  * @brief Computes the tensor contraction of a callable over the half-open interval [Start, End).
  * @tparam Start Lower bound of the interval (inclusive).
@@ -166,5 +168,7 @@ AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE constexpr auto cyclic_permutation_sum(F
     return (1.0 / 3.0) *
            (f.template operator()<a, b, c>() + f.template operator()<b, c, a>() + f.template operator()<c, a, b>());
 }
+
+} // namespace tensor
 
 } // namespace treesap

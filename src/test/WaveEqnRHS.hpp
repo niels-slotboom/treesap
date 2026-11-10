@@ -19,6 +19,7 @@ template <int ngrow_> struct WaveEqnRHS {
         // import namespaces for more concise code
         using namespace treesap;
         using namespace stencil;
+        using namespace tensor;
 
         // set up the aliases for field variables:
         ScalarAlias<0> phi{{arr}};      // component range {0}

@@ -1,24 +1,31 @@
 // SPDX-License-Identifier: MPL-2.0
 // Copyright (c) 2026 Niels Slotboom
 
+/**
+ * @file
+ * @brief Provides the concrete implementation `treesap::tensor::SymRank2Alias` of `treesap::tensor::TensorAliasBase`.
+ */
+
 #pragma once
 
 #include "TensorAliasBase.hpp"
 
 namespace treesap {
 
+namespace tensor {
 /**
- * @brief Concrete implementation of the CRTP base class TensorAliasBase for a symmetric rank-2 tensor, such as e.g. the
- * metric or extrinsic curvature. Redundant components are not aliased; only the lower-triangular part is addressed.
- * @tparam comp_base_ - the first index in the flat component list belonging to the alias
- * @tparam rank_ - the rank of the tensor, i.e. its index count
- * @tparam ArrayType - the type of the tensor components; defaults to const amrex::Real
- * @tparam dim_ - the dimension of the tensor indices, i.e. their value range; defaults to 3
+ * @brief Concrete implementation of the CRTP base class `treesap::tensor::TensorAliasBase` for a symmetric rank-2
+ * tensor, such as e.g. the metric or extrinsic curvature. Redundant components are not aliased; only the
+ * lower-triangular part is addressed.
+ * @tparam comp_base_ First index in MultiFab component range belonging to the alias
+ * @tparam dim_ Dimension of the tensor indices, i.e. their value range; defaults to 3
+ * @tparam ArrayType Type of the tensor components; defaults to `const amrex::Real`
+ * @note Satisfies the `concept` `treesap::tensor::TensorAliasImplementation`.
  */
-template <int comp_base_, typename ArrayType = const amrex::Real, int dim_ = 3>
-struct SymRank2Alias : public TensorAliasBase<SymRank2Alias<comp_base_, ArrayType, dim_>, comp_base_,
+template <int comp_base_, int dim_ = 3, typename ArrayType = const amrex::Real>
+struct SymRank2Alias : public TensorAliasBase<SymRank2Alias<comp_base_, dim_, ArrayType>, comp_base_,
                                               (dim_ * (dim_ + 1)) / 2, 2, dim_, ArrayType> {
-    using Base = TensorAliasBase<SymRank2Alias<comp_base_, ArrayType, dim_>, comp_base_, (dim_ * (dim_ + 1)) / 2, 2,
+    using Base = TensorAliasBase<SymRank2Alias<comp_base_, dim_, ArrayType>, comp_base_, (dim_ * (dim_ + 1)) / 2, 2,
                                  dim_, ArrayType>;
     using Base::dim;
     using Base::ncomp;
@@ -53,4 +60,5 @@ struct SymRank2Alias : public TensorAliasBase<SymRank2Alias<comp_base_, ArrayTyp
         return {row, col};
     }
 };
+} // namespace tensor
 } // namespace treesap

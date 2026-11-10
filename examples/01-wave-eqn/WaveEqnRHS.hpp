@@ -21,6 +21,7 @@ template <int ngrow_> struct WaveEqnRHS {
                                                                     const amrex::Array4<const amrex::Real>& arr) const {
         // import namespaces for more concise code
         using namespace treesap;
+        using namespace tensor;
         using namespace stencil;
 
         // set up the aliases for field variables:

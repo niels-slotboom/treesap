@@ -3,7 +3,7 @@
 
 /**
  * @file
- * @brief Provides the PlotExporter class for periodic AMReX plot file exports.
+ * @brief Provides the `treesap::PlotExporter` class for periodic AMReX plot file exports.
  */
 
 #pragma once

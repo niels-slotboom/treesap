@@ -35,9 +35,9 @@ namespace stencil {
  * details see `treesap::stencil_impl`.
  */
 template <int ngrow, int dir, typename AliasType>
-    requires(TensorAliasImplementation<AliasType>)
+    requires(tensor::TensorAliasImplementation<AliasType>)
 AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE auto derivative(int i, int j, int k, const AliasType& tensor,
-                                                         const IndexArray<AliasType::rank>& tensor_indices) {
+                                                         const tensor::IndexArray<AliasType::rank>& tensor_indices) {
 
     return stencil_impl::derivative_impl<ngrow, typename AliasType::Base::arr_t, dir>::eval(
         i, j, k, AliasType::Base::get_absolute(tensor_indices), tensor.arr);
@@ -66,9 +66,9 @@ AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE auto derivative(int i, int j, int k, co
  * details see `treesap::stencil_impl`.
  */
 template <int ngrow, int dir0, int dir1, typename AliasType>
-    requires(TensorAliasImplementation<AliasType>)
+    requires(tensor::TensorAliasImplementation<AliasType>)
 AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE auto derivative(int i, int j, int k, const AliasType& tensor,
-                                                         const IndexArray<AliasType::rank>& tensor_indices) {
+                                                         const tensor::IndexArray<AliasType::rank>& tensor_indices) {
 
     return stencil_impl::derivative_impl<ngrow, typename AliasType::Base::arr_t, dir0, dir1>::eval(
         i, j, k, AliasType::Base::get_absolute(tensor_indices), tensor.arr);
@@ -98,9 +98,9 @@ AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE auto derivative(int i, int j, int k, co
  * details see `treesap::stencil_impl`.
  */
 template <int ngrow, int dir0, int dir1, int dir2, typename AliasType>
-    requires(TensorAliasImplementation<AliasType>)
+    requires(tensor::TensorAliasImplementation<AliasType>)
 AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE auto derivative(int i, int j, int k, const AliasType& tensor,
-                                                         const IndexArray<AliasType::rank>& tensor_indices) {
+                                                         const tensor::IndexArray<AliasType::rank>& tensor_indices) {
 
     return stencil_impl::derivative_impl<ngrow, typename AliasType::Base::arr_t, dir0, dir1, dir2>::eval(
         i, j, k, AliasType::Base::get_absolute(tensor_indices), tensor.arr);

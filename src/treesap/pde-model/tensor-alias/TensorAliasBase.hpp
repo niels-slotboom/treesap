@@ -1,6 +1,12 @@
 // SPDX-License-Identifier: MPL-2.0
 // Copyright (c) 2026 Niels Slotboom
 
+/**
+ * @file
+ * @brief Provides `treesap::tensor::TensorAliasBase` base class and `concept`
+ * `treesap::tensor::TensorAliasImplementation`.
+ */
+
 #pragma once
 
 #include "AMReX_Array4.H"
@@ -12,13 +18,19 @@
 #include "IndexArray.hpp"
 
 namespace treesap {
+/**
+ * @namespace
+ * @brief Provides the compile-time resolved tensor aliasing system and related utilities.
+ */
+namespace tensor {
 
 /**
  * @brief Concept that a derived class @tparam Derived must satisfy to inherit from TensorAliasBase.
- * @note The following properties are checked:
- * - Must provide a Derived::Base type alias for the TensorAliasBase class
- * - Must have static constexpr int members ncomp, rank and dim
- * - Must have constexpr-evaluable static functions restore_relative() and get_relative()
+ *
+ * The following properties are checked:
+ * - Must provide a `Derived::Base` type alias for the `treesap::tensor::TensorAliasBase` class
+ * - Must have `static constexpr int` members `ncomp`, `rank` and `dim`
+ * - Must have `constexpr`-evaluable static functions restore_relative() and get_relative()
  */
 template <typename Derived>
 concept TensorAliasImplementation = requires { // check for ncomp, rank, dim
@@ -47,17 +59,17 @@ concept TensorAliasImplementation = requires { // check for ncomp, rank, dim
 };
 
 /**
- * CRTP Base class for aliasing a tensor onto a flat MultiFab component list
- * @tparam Derived - the type of the implementing class
- * @tparam comp_base_ - the first index in the flat component list belonging to the alias
- * @tparam ncomp_ - number of components being aliased
- * @tparam rank_ - the rank of the tensor, i.e. its index count
- * @tparam dim_ - the dimension of the tensor indices, i.e. their value range
- * @tparam ArrayType - the type of the tensor components, typically const amrex::Real
+ * @brief CRTP Base class for aliasing a tensor onto a MultiFab component range
+ * @tparam Derived Type of the implementing class
+ * @tparam comp_base_ First index in the MultiFab component range belonging to the alias
+ * @tparam ncomp_ Number of components being aliased
+ * @tparam rank_ Rank of the tensor, i.e. its index count
+ * @tparam dim_ Dimension of the tensor indices, i.e. their value range
+ * @tparam ArrayType Type of the tensor components, typically `const amrex::Real`
  */
 template <typename Derived, int comp_base_, int ncomp_, int rank_, int dim_, typename ArrayType>
 struct TensorAliasBase {
-    /// absolute component in the flattened list of the MultiFab components where the tensor alias's memory starts
+    /// absolute component in the  MultiFab component range where the tensor alias' memory starts
     static constexpr int comp_base = comp_base_;
 
     /// number of components the alias spans
@@ -69,7 +81,7 @@ struct TensorAliasBase {
     /// dimension of the tensor space; the range of the values indices can take
     static constexpr int dim = dim_;
 
-    /// value for comp_base of the next tensor in the flattened MultiFab component list
+    /// value for `comp_base` of the next tensor in the MultiFab component range
     static constexpr int next = comp_base_ + ncomp_;
 
     // assert sensible values for the above compile-time constants
@@ -84,10 +96,12 @@ struct TensorAliasBase {
     using arr_t = ArrayType;
 
     /**
-     * @brief Checks if a component index falls within the valid range for this tensor alias.
+     * @brief Checks if an absolute index in the MultiFab component range falls within the valid range for this tensor
+     * alias.
      * @param absolute_comp The absolute component index in the flat MultiFab component range.
      * @return True if the component is within range, false otherwise.
-     * @note This function is static to ensure constexpr-evaluability, since it does not depend on instance state.
+     * @note This function is static to ensure `constexpr`-evaluability, since it does not depend on instance state. It
+     * can be called using `.contains()` regardless.
      */
     static AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE constexpr bool contains(int absolute_comp) {
         const int comp_rel_to_base = absolute_comp - comp_base;
@@ -95,20 +109,22 @@ struct TensorAliasBase {
     }
 
     /**
-     * @brief Computes the absolute component index for given tensor indices.
+     * @brief Computes the absolute index in the MultiFab component range for given tensor indices.
      * @param tensor_indices The tensor index values (empty for rank 0 scalars).
      * @return The absolute component index in the underlying array.
-     * @note This function is static to ensure constexpr-evaluability, since it does not depend on instance state.
+     * @note This function is static to ensure `constexpr`-evaluability, since it does not depend on instance state. It
+     * can be called using `.get_absolute()` regardless.
      */
     static AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE constexpr int get_absolute(const IndexArray<rank> tensor_indices) {
         return comp_base + Derived::get_relative(tensor_indices);
     }
 
     /**
-     * @brief Restores tensor indices from an absolute component index.
+     * @brief Restores tensor indices from an absolute index in the MultiFab component range.
      * @param absolute_comp The absolute component index.
      * @return The corresponding tensor indices.
-     * @note This function is static to ensure constexpr-evaluability, since it does not depend on instance state.
+     * @note This function is static to ensure `constexpr`-evaluability, since it does not depend on instance state. It
+     * can be called using `.restore_absolute()` regardless.
      */
     static AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE constexpr IndexArray<rank> restore_absolute(int absolute_comp) {
         return Derived::restore_relative(absolute_comp - comp_base);
@@ -116,9 +132,9 @@ struct TensorAliasBase {
 
     /**
      * @brief Accesses a specific array element using spatial and tensor indices.
-     * @param i The grid index in the x direction.
-     * @param j The grid index in the y direction.
-     * @param k The grid index in the z direction.
+     * @param i Grid cell index in \f$x\f$-direction.
+     * @param j Grid cell index in \f$y\f$-direction.
+     * @param k Grid cell index in \f$z\f$-direction.
      * @param tensor_indices The tensor index values ({} for rank 0 scalars).
      * @return Reference to the array element.
      */
@@ -127,5 +143,7 @@ struct TensorAliasBase {
         return arr(i, j, k, get_absolute(tensor_indices));
     }
 };
+
+} // namespace tensor
 
 } // namespace treesap
