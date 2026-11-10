@@ -32,9 +32,9 @@ namespace stencil {
  * @note The derivative stencils are unrolled at compile time and do not produce runtime call overhead.
  * @note To obtain an approximation of a derivative, the return value of this function must be multiplied by
  * \f$1/\Delta x^k\f$ where \f$k\f$ is its order.
- * @param i First center cell index.
- * @param j Second center cell index.
- * @param k Third center cell index.
+ * @param i Grid cell index in \f$x\f$-direction.
+ * @param j Grid cell index in \f$y\f$-direction.
+ * @param k Grid cell index in \f$z\f$-direction.
  * @param comp Component index in the MultiFab component range.
  * @param arr Reference to the array to evaluate stencil on.
  * @return A finite-difference approximation of \f$\Delta x \partial_a
@@ -84,21 +84,21 @@ AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE ArrayType derivative(amrex::IntVect idx
 // --- --- --- KREISS-OLIGER DISSIPATION TERMS --- --- ---
 /**
  * @brief Computes the Kreiss-Oliger (KO) dissipation term along a given coordinate direction `dir`.
- * @tparam ngrow Order of the KO operator.
+ * @tparam order Order of the KO operator.
  * @tparam dir Coordinate direction along which KO operator is evaluated.
  * @tparam ArrayType Type of the data stored in the `arr` argument.
  * @note The KO stencils are unrolled at compile time and do not produce runtime call overhead.
  * @note To obtain the value of the KO operator evaluation, the return value of this function must be multiplied by
  * \f$1/\Delta x\f$ independent of its order.
- * @param i First center cell index.
- * @param j Second center cell index.
- * @param k Third center cell index.
+ * @param i Grid cell index in \f$x\f$-direction.
+ * @param j Grid cell index in \f$y\f$-direction.
+ * @param k Grid cell index in \f$z\f$-direction.
  * @param comp Component index in the MultiFab component range.
  * @param arr Reference to the array to evaluate stencil on.
  * @return Value of the KO operator evaluation \f$\Delta x \mathcal{D}_\text{KO}\verb|arr|(\verb|i, j, k, comp|)\f$.
  *
- * The stencil width is `2 * ngrow + 1`, and requires `arr` to provide `ngrow` ghost cells. In this context, the
- * Kreiss-Oliger dissipation term of order \f$r = \verb|ngrow|\f$ is normalised as
+ * The stencil width is `2 * order + 1`, and requires `arr` to provide `ngrow = order` ghost cells. In this context, the
+ * Kreiss-Oliger dissipation term of order \f$r = \verb|order|\f$ is normalised as
  * \f[
  *      \mathcal{D}_\text{KO}^r = (-1)^{r+1}\frac{\Delta x^{2r-1}}{2^{2r}}(D_+ D_-)^r,
  * \f]
@@ -107,22 +107,22 @@ AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE ArrayType derivative(amrex::IntVect idx
  *      D_\pm f(x) = \pm \frac{f(x\pm \Delta x)-f(x)}{\Delta x}.
  * \f]
  */
-template <int ngrow, int dir, typename ArrayType>
+template <int order, int dir, typename ArrayType>
 AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE ArrayType kreiss_oliger(int i, int j, int k, int comp,
                                                                  const amrex::Array4<ArrayType>& arr) {
     using namespace cexprmath;
 
-    static_assert(ngrow > 0, "Can only apply Kreiss-Oliger stencil for ngrow >= 1");
+    static_assert(order > 0, "Can only apply Kreiss-Oliger stencil for ngrow >= 1");
     constexpr int i_offset = (dir == stencil::dir::x) ? 1 : 0;
     constexpr int j_offset = (dir == stencil::dir::y) ? 1 : 0;
     constexpr int k_offset = (dir == stencil::dir::z) ? 1 : 0;
 
-    constexpr int r = ngrow;
-    constexpr double norm = 1.0 / static_cast<double>(power(2, 2 * ngrow));
+    constexpr int r = order;
+    constexpr double norm = 1.0 / static_cast<double>(power(2, 2 * order));
 
     std::decay_t<ArrayType> result = -binom(2 * r, r) * arr(i, j, k, comp);
 #pragma unroll
-    for (int s = 1; s <= ngrow; ++s) {
+    for (int s = 1; s <= order; ++s) {
         result += -alternating_sign(s) * binom(2 * r, r + s) *
                   (arr(i + s * i_offset, j + s * j_offset, k + s * k_offset, comp) +
                    arr(i - s * i_offset, j - s * j_offset, k - s * k_offset, comp));

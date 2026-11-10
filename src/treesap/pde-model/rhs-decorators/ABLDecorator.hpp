@@ -1,6 +1,12 @@
 // SPDX-License-Identifier: MPL-2.0
 // Copyright (c) 2026 Niels Slotboom
 
+/**
+ * @file
+ * @brief Implements a decorator pattern for absorbing boundary layers (ABL) by providing `treesap::ABLDecorator`,
+ * `treesap::ABLDecorator::ABLData` and `treesap::ABLProfileConcept`.
+ */
+
 #pragma once
 
 #include "../../util/stencil.hpp"
@@ -13,8 +19,8 @@ namespace treesap {
  * @brief Verifies that a profile type is trivially copyable, accepts a real value,
  *        and evaluates to zero at 0.0 (bulk interface) and one at 1.0 (domain boundary).
  * @tparam F Profile type to check.
+ * @note Requires `constexpr`-evaluability.
  */
-// needs the implementer to be constexpr
 template <typename F>
 concept ABLProfileConcept = std::is_trivially_copyable_v<F> && requires(F f, amrex::Real s) {
     { f(s) } -> std::convertible_to<amrex::Real>;
@@ -25,7 +31,14 @@ concept ABLProfileConcept = std::is_trivially_copyable_v<F> && requires(F f, amr
 /**
  * @brief Decorates a right-hand side model to add absorbing boundary layer (ABL) damping.
  * @tparam RHSType Underlying right-hand side model type.
- * @tparam ABLProfileType Profile function type.
+ * @tparam ABLProfileType Profile function type; typically a lambda expression.
+ * @note Satisfies `treesap::RHSConcept`.
+ *
+ * Concretely, the decoration wraps the original RHS \f$F = \verb|rhs|\f$ as
+ * \f[
+ *      F(\Phi,t) \rightarrow F(\Phi,t) - \sigma(x,y,z) \dot (\Phi(x,y,z,t) - \Phi_0)
+ * \f]
+ * where \f$\Phi_0\f$ is a vector of target field values.
  */
 template <typename RHSType, typename ABLProfileType>
     requires RHSConcept<RHSType> && ABLProfileConcept<ABLProfileType>
@@ -36,17 +49,27 @@ struct ABLDecorator {
     /// Number of ghost cells.
     static constexpr int ngrow = RHSType::ngrow;
 
+    /**
+     * @brief Configuration and parameter container for ABL damping strength function.
+     */
     struct ABLData {
+        /**
+         * @brief Initialises the ABL data container.
+         * @param target_values_ Target values for field damping.
+         * @param thickness_ Layer thickness in cells.
+         * @param max_strength_ Maximum damping strength.
+         * @param profile_ Profile of damping strength.
+         */
         ABLData(amrex::GpuArray<amrex::Real, ncomp> target_values_, int thickness_, amrex::Real max_strength_,
                 ABLProfileType profile_)
             : target_values(std::move(target_values_)), thickness(thickness_),
               inv_thickness(1.0 / static_cast<amrex::Real>(thickness_)), max_strength(max_strength_),
               profile(std::move(profile_)) {}
 
-        ABLProfileType profile; ///< Profile of damping strength (s = 0 at interface, s = 1 at boundary).
-        int thickness;
-        amrex::Real inv_thickness;                         ///< Inverse layer thickness (1 / thickness).
-        amrex::Real max_strength;                          ///< Maximum damping strength.
+        ABLProfileType profile;    ///< Profile of damping strength (s = 0 at interface, s = 1 at boundary).
+        int thickness;             ///< Layer thickness in cells.
+        amrex::Real inv_thickness; ///< Inverse layer thickness (1 / thickness).
+        amrex::Real max_strength;  ///< Maximum damping strength.
         amrex::GpuArray<amrex::Real, ncomp> target_values; ///< Target values for field damping.
     };
 
@@ -68,10 +91,10 @@ struct ABLDecorator {
 
     /**
      * @brief Evaluates the decorated right-hand side with added boundary damping.
-     * @param i Grid cell index in X direction.
-     * @param j Grid cell index in Y direction.
-     * @param k Grid cell index in Z direction.
-     * @param comp Component index.
+     * @param i Grid cell index in \f$x\f$-direction.
+     * @param j Grid cell index in \f$y\f$-direction.
+     * @param k Grid cell index in \f$z\f$-direction.
+     * @param comp Component index in the MultiFab component range.
      * @param time Current simulation time.
      * @param arr Data array view buffer.
      * @return Adjusted right-hand side value.
@@ -85,10 +108,10 @@ struct ABLDecorator {
 
     /**
      * @brief Computes the damping coefficient at a grid cell.
-     * @param i Grid cell index in X direction.
-     * @param j Grid cell index in Y direction.
-     * @param k Grid cell index in Z direction.
-     * @return Damping coefficient value.
+     * @param i Grid cell index in \f$x\f$-direction.
+     * @param j Grid cell index in \f$y\f$-direction.
+     * @param k Grid cell index in \f$z\f$-direction.
+     * @return Damping coefficient value \f$\sigma(x,y,z)\f$.
      */
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real sigma(int i, int j, int k) const {
         using namespace stencil;
@@ -111,8 +134,8 @@ struct ABLDecorator {
         return data.max_strength * data.profile(scaled_dist);
     }
 
-    RHSType rhs; ///< Underlying right-hand side model.
-    ABLData data;
+    RHSType rhs;     ///< Undecorated right-hand side functor.
+    ABLData data;    ///< Data needed to populate `bulk` and evaluate damping factor `sigma`.
     amrex::Box bulk; ///< Inner simulation domain box without damping layer.
 };
 

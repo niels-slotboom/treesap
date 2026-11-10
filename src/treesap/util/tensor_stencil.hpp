@@ -22,9 +22,9 @@ namespace stencil {
  * @note The derivative stencils are unrolled at compile time and do not produce runtime call overhead.
  * @note To obtain an approximation of a derivative, the return value of this function must be multiplied by
  * \f$1/\Delta x^k\f$ where \f$k\f$ is its order.
- * @param i First center cell index.
- * @param j Second center cell index.
- * @param k Third center cell index.
+ * @param i Grid cell index in \f$x\f$-direction.
+ * @param j Grid cell index in \f$y\f$-direction.
+ * @param k Grid cell index in \f$z\f$-direction.
  * @param tensor Reference to the tensor alias to evaluate stencil on.
  * @param tensor_indices The indices of the tensor component to be differentiated.
  * @return A finite-difference approximation of \f$\Delta x\partial_a\verb|tensor|_{b...}\verb|(i, j, k)|\f$ where
@@ -52,9 +52,9 @@ AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE auto derivative(int i, int j, int k, co
  * @note The derivative stencils are unrolled at compile time and do not produce runtime call overhead.
  * @note To obtain an approximation of a derivative, the return value of this function must be multiplied by
  * \f$1/\Delta x^k\f$ where \f$k\f$ is its order.
- * @param i First center cell index.
- * @param j Second center cell index.
- * @param k Third center cell index.
+ * @param i Grid cell index in \f$x\f$-direction.
+ * @param j Grid cell index in \f$y\f$-direction.
+ * @param k Grid cell index in \f$z\f$-direction.
  * @param tensor Reference to the tensor alias to evaluate stencil on.
  * @param tensor_indices The indices of the tensor component to be differentiated.
  * @return A finite-difference approximation of \f$\Delta x^2\partial_a\partial_b\verb|tensor|_{c...}\verb|(i, j, k)|\f$
@@ -84,9 +84,9 @@ AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE auto derivative(int i, int j, int k, co
  * @note The derivative stencils are unrolled at compile time and do not produce runtime call overhead.
  * @note To obtain an approximation of a derivative, the return value of this function must be multiplied by
  * \f$1/\Delta x^k\f$ where \f$k\f$ is its order.
- * @param i First center cell index.
- * @param j Second center cell index.
- * @param k Third center cell index.
+ * @param i Grid cell index in \f$x\f$-direction.
+ * @param j Grid cell index in \f$y\f$-direction.
+ * @param k Grid cell index in \f$z\f$-direction.
  * @param tensor Reference to the tensor alias to evaluate stencil on.
  * @param tensor_indices The indices of the tensor component to be differentiated.
  * @return A finite-difference approximation of \f$\Delta x^3\partial_a\partial_b\partial_c\verb|tensor|_{d...}\verb|(i,

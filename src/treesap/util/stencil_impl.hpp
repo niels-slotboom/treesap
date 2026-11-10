@@ -157,10 +157,10 @@ template <int ngrow, typename ArrayType, int... Dirs> struct derivative_impl {
                   "No stencil::derivative implementation available for requested template parameters");
     /**
      * @brief Base evaluation fallback function.
-     * @param i First cell index.
-     * @param j Second cell index.
-     * @param k Third cell index.
-     * @param comp One-dimensional index of the MultiFab component.
+     * @param i Grid cell index in \f$x\f$-direction.
+     * @param j Grid cell index in \f$y\f$-direction.
+     * @param k Grid cell index in \f$z\f$-direction.
+     * @param comp Component index in the MultiFab component range.
      * @param arr Reference to the array to evaluate stencil on.
      * @return Zero.
      *
@@ -189,9 +189,9 @@ template <int ngrow, typename ArrayType, int... Dirs> struct derivative_impl {
 template <int ngrow, typename ArrayType, int dir> struct derivative_impl<ngrow, ArrayType, dir> {
     /**
      * @brief Compile-time unrolled first-order derivative evaluation function.
-     * @param i First cell index.
-     * @param j Second cell index.
-     * @param k Third cell index.
+     * @param i Grid cell index in \f$x\f$-direction.
+     * @param j Grid cell index in \f$y\f$-direction.
+     * @param k Grid cell index in \f$z\f$-direction.
      * @param comp Component index in the MultiFab component range.
      * @param arr Reference to the array to evaluate stencil on.
      * @return Finite-difference stencil approximation of the first derivative of `arr[comp]` along `dir` at `(i,j,k)`.
@@ -229,9 +229,9 @@ template <int ngrow, typename ArrayType, int dir> struct derivative_impl<ngrow, 
 template <int ngrow, typename ArrayType, int dir0, int dir1> struct derivative_impl<ngrow, ArrayType, dir0, dir1> {
     /**
      * @brief Compile-time unrolled second-order derivative evaluation function.
-     * @param i First cell index.
-     * @param j Second cell index.
-     * @param k Third cell index.
+     * @param i Grid cell index in \f$x\f$-direction.
+     * @param j Grid cell index in \f$y\f$-direction.
+     * @param k Grid cell index in \f$z\f$-direction.
      * @param comp Component index in the MultiFab component range.
      * @param arr Reference to the array to evaluate stencil on.
      * @return Finite-difference stencil approximation of the second derivative of `arr[comp]` along `dir0, dir1` at
@@ -289,9 +289,9 @@ template <int ngrow, typename ArrayType, int dir0, int dir1, int dir2>
 struct derivative_impl<ngrow, ArrayType, dir0, dir1, dir2> {
     /**
      * @brief Compile-time unrolled third-order derivative evaluation function.
-     * @param i First cell index.
-     * @param j Second cell index.
-     * @param k Third cell index.
+     * @param i Grid cell index in \f$x\f$-direction.
+     * @param j Grid cell index in \f$y\f$-direction.
+     * @param k Grid cell index in \f$z\f$-direction.
      * @param comp Component index in the MultiFab component range.
      * @param arr Reference to the array to evaluate stencil on.
      * @return Finite-difference stencil approximation of the third derivative of `arr[comp]` along `dir0, dir1, dir2`
