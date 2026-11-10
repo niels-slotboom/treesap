@@ -19,7 +19,27 @@ namespace treesap {
  * THE USER**.
  */
 namespace stencil {
-/// Computes arbitrary order derivative given template directions using grid indices (i, j, k).
+/**
+ * @brief Evaluates a centered derivative stencil.
+ * @tparam ngrow Amount of neighbours in either direction; the stencil width is `2 * ngrow + 1`.
+ * @tparam ArrayType Type of the data stored in the `arr` argument.
+ * @tparam Dirs... Up to three directions along which derivatives are approximated.
+ * @note The derivative stencils are unrolled at compile time and do not produce runtime call overhead.
+ * @note To obtain an approximation of a derivative, the return value of this function must be multiplied by
+ * \f$1/\Delta x^k\f$ where \f$k\f$ is its order.
+ * @param i First center cell index.
+ * @param j Second center cell index.
+ * @param k Third center cell index.
+ * @param comp Component index in the MultiFab component range.
+ * @param arr Reference to the array to evaluate stencil on.
+ * @return A finite-difference approximation of \f$\Delta x \partial_a
+ * \,\verb|arr|(\verb|i, j, k|)\f$, \f$\Delta x^2 \partial_a \partial_b
+ * \,\verb|arr|(\verb|i, j, k|)\f$ or \f$\Delta x^3 \partial_a \partial_b \partial_c\,\verb|arr|(\verb|i, j, k|)\f$.
+ *
+ * The stencil width is `2 * ngrow + 1`, and requires `arr` to provide `ngrow` ghost cells. The number of directions
+ * provided in `int... Dir` defines the derivative order; up to third derivatives are implemented. For implementation
+ * details see `treesap::stencil_impl`.
+ */
 template <int ngrow, typename ArrayType, int... Dirs>
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE ArrayType derivative(int i, int j, int k, int comp,
                                                               const amrex::Array4<ArrayType>& arr) {
@@ -28,7 +48,25 @@ AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE ArrayType derivative(int i, int j, int 
     return stencil_impl::derivative_impl<ngrow, ArrayType, Dirs...>::eval(i, j, k, comp, arr);
 }
 
-/// Computes arbitrary order derivative given template directions using an IntVect index.
+/**
+ * @brief Evaluates a centered derivative stencil.
+ * @tparam ngrow Amount of neighbours in either direction; the stencil width is `2 * ngrow + 1`.
+ * @tparam ArrayType Type of the data stored in the `arr` argument.
+ * @tparam Dirs... Up to three directions along which derivatives are approximated.
+ * @note The derivative stencils are unrolled at compile time and do not produce runtime call overhead.
+ * @note To obtain an approximation of a derivative, the return value of this function must be multiplied by
+ * \f$1/\Delta x^k\f$ where \f$k\f$ is its order.
+ * @param idx Index vector of the center cell.
+ * @param comp Component index in the MultiFab component range.
+ * @param arr Reference to the array to evaluate stencil on.
+ * @return A finite-difference approximation of \f$\Delta x \partial_a
+ * \,\verb|arr|(\verb|idx|)\f$, \f$\Delta x^2 \partial_a \partial_b
+ * \,\verb|arr|(\verb|idx|)\f$ or \f$\Delta x^3 \partial_a \partial_b \partial_c\,\verb|arr|(\verb|idx|)\f$.
+ *
+ * The stencil width is `2 * ngrow + 1`, and requires `arr` to provide `ngrow` ghost cells. The number of directions
+ * provided in `int... Dir` defines the derivative order; up to third derivatives are implemented. For implementation
+ * details see `treesap::stencil_impl`.
+ */
 template <int ngrow, typename ArrayType, int... Dirs>
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE ArrayType derivative(amrex::IntVect idx, int comp,
                                                               const amrex::Array4<ArrayType>& arr) {
@@ -37,74 +75,49 @@ AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE ArrayType derivative(amrex::IntVect idx
     return stencil_impl::derivative_impl<ngrow, ArrayType, Dirs...>::eval(idx[0], idx[1], idx[2], comp, arr);
 }
 
-// --- --- --- SPECIAL OPERATORS DERIVED FROM BASIC DERIVATIVE --- --- ---
-
-// --- GRADIENT ---
-/// Computes the gradient vector at a grid point.
-template <int ngrow, typename ArrayType>
-AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE amrex::GpuArray<ArrayType, 3> gradient(int i, int j, int k, int comp,
-                                                                                const amrex::Array4<ArrayType>& arr) {
-    return {
-        derivative<ngrow, ArrayType, dir::x>(i, j, k, comp, arr),
-        derivative<ngrow, ArrayType, dir::y>(i, j, k, comp, arr),
-        derivative<ngrow, ArrayType, dir::z>(i, j, k, comp, arr),
-    };
-}
-
-/// Computes the squared magnitude of the gradient at a grid point.
-template <int ngrow, typename ArrayType>
-AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE ArrayType gradient_squared(int i, int j, int k, int comp,
-                                                                    const amrex::Array4<ArrayType>& arr) {
-    const auto grad = gradient<ngrow, ArrayType>(i, j, k, comp, arr);
-    return grad[0] * grad[0] + grad[1] * grad[1] + grad[2] * grad[2];
-}
-
-// --- LAPLACIAN ---
-// NOTE: This only works for dx = dy = dz.
-/// Computes the Laplacian operator at a grid point.
-template <int ngrow, typename ArrayType>
-AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE ArrayType laplacian(int i, int j, int k, int comp,
-                                                             const amrex::Array4<ArrayType>& arr) {
-    return derivative<ngrow, ArrayType, dir::x, dir::x>(i, j, k, comp, arr) +
-           derivative<ngrow, ArrayType, dir::y, dir::y>(i, j, k, comp, arr) +
-           derivative<ngrow, ArrayType, dir::z, dir::z>(i, j, k, comp, arr);
-}
-
-// --- HESSIAN ---
-/// Computes the Hessian matrix of second-order partial derivatives at a grid point.
-template <int ngrow, typename ArrayType>
-AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE amrex::Array2D<ArrayType, 0, 2, 0, 2>
-hessian(int i, int j, int k, int comp, const amrex::Array4<ArrayType>& arr) {
-    amrex::Array2D<ArrayType, 0, 2, 0, 2> H;
-    // diagonal
-    H(0, 0) = derivative<ngrow, ArrayType, dir::x, dir::x>(i, j, k, comp, arr);
-    H(1, 1) = derivative<ngrow, ArrayType, dir::y, dir::y>(i, j, k, comp, arr);
-    H(2, 2) = derivative<ngrow, ArrayType, dir::z, dir::z>(i, j, k, comp, arr);
-    // off-diagonal
-    H(0, 1) = H(1, 0) = derivative<ngrow, ArrayType, dir::x, dir::y>(i, j, k, comp, arr);
-    H(0, 2) = H(2, 0) = derivative<ngrow, ArrayType, dir::x, dir::z>(i, j, k, comp, arr);
-    H(1, 2) = H(2, 1) = derivative<ngrow, ArrayType, dir::y, dir::z>(i, j, k, comp, arr);
-
-    return H;
-}
-
 // --- --- --- KREISS-OLIGER DISSIPATION TERMS --- --- ---
-/// Computes the Kreiss-Oliger dissipation term along a given coordinate direction.
+/**
+ * @brief Computes the Kreiss-Oliger (KO) dissipation term along a given coordinate direction `dir`.
+ * @tparam ngrow Order of the KO operator.
+ * @tparam dir Coordinate direction along which KO operator is evaluated.
+ * @tparam ArrayType Type of the data stored in the `arr` argument.
+ * @note The KO stencils are unrolled at compile time and do not produce runtime call overhead.
+ * @note To obtain the value of the KO operator evaluation, the return value of this function must be multiplied by
+ * \f$1/\Delta x\f$ independent of its order.
+ * @param i First center cell index.
+ * @param j Second center cell index.
+ * @param k Third center cell index.
+ * @param comp Component index in the MultiFab component range.
+ * @param arr Reference to the array to evaluate stencil on.
+ * @return Value of the KO operator evaluation \f$\Delta x \mathcal{D}_\text{KO}\verb|arr|(\verb|i, j, k|)\f$.
+ *
+ * The stencil width is `2 * ngrow + 1`, and requires `arr` to provide `ngrow` ghost cells. In this context, the
+ * Kreiss-Oliger dissipation term of order \f$r = \verb|ngrow|\f$ is normalised as
+ * \f[
+ *      \mathcal{D}_\text{KO}^r = (-1)^{r+1}\frac{\Delta x^{2r-1}}{2^{2r}}(D_+ D_-)^r,
+ * \f]
+ * where \f$D_+\f$ and \f$D_-\f$ are the forward and backward difference operators, respectively, given by
+ * \f[
+ *      D_\pm f(x) = \pm \frac{f(x\pm \Delta x)-f(x)}{\Delta x}.
+ * \f]
+ */
 template <int ngrow, int dir, typename ArrayType>
 AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE ArrayType kreiss_oliger(int i, int j, int k, int comp,
                                                                  const amrex::Array4<ArrayType>& arr) {
+    using namespace cexprmath;
+
     static_assert(ngrow > 0, "Can only apply Kreiss-Oliger stencil for ngrow >= 1");
     constexpr int i_offset = (dir == stencil::dir::x) ? 1 : 0;
     constexpr int j_offset = (dir == stencil::dir::y) ? 1 : 0;
     constexpr int k_offset = (dir == stencil::dir::z) ? 1 : 0;
 
     constexpr int r = ngrow;
-    constexpr double norm = 1.0 / static_cast<double>(cexprmath::power(2, 2 * ngrow));
+    constexpr double norm = 1.0 / static_cast<double>(power(2, 2 * ngrow));
 
-    std::decay_t<ArrayType> result = -cexprmath::binom(2 * r, r) * arr(i, j, k, comp);
+    std::decay_t<ArrayType> result = -binom(2 * r, r) * arr(i, j, k, comp);
 #pragma unroll
     for (int s = 1; s <= ngrow; ++s) {
-        result += -cexprmath::sign(s) * cexprmath::binom(2 * r, r + s) *
+        result += -alternating_sign(s) * binom(2 * r, r + s) *
                   (arr(i + s * i_offset, j + s * j_offset, k + s * k_offset, comp) +
                    arr(i - s * i_offset, j - s * j_offset, k - s * k_offset, comp));
     }

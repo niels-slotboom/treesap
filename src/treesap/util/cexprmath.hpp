@@ -76,7 +76,7 @@ AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE constexpr std::int64_t power(std::int64
  * @return The value of the expression \f$(-1)^k\f$.
  * @note This function is `constexpr` evaluable.
  */
-AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE constexpr int sign(int k) { return (k & 1) ? -1 : 1; }
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE constexpr int alternating_sign(int k) { return (k & 1) ? -1 : 1; }
 
 /**
  * @brief Computes the generalised harmonic number \f$H_{n,m}\f$.

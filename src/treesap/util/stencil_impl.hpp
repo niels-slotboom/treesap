@@ -57,7 +57,7 @@ template <int ngrow> AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE constexpr amrex::R
     if (offset == 0)
         return 0;
 
-    std::int64_t num = sign(k_abs + 1) * power(factorial(n), 2);
+    std::int64_t num = alternating_sign(k_abs + 1) * power(factorial(n), 2);
     std::int64_t denom = k_abs * factorial(n - k_abs) * factorial(n + k_abs);
     double w = static_cast<double>(num) / static_cast<double>(denom);
     return static_cast<amrex::Real>((k > 0) ? w : -w);
@@ -91,7 +91,7 @@ template <int ngrow> AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE constexpr amrex::R
     if (offset == 0)
         return -2.0 * generalised_harmonic_number(n, 2);
 
-    std::int64_t num = 2 * sign(k + 1) * power(factorial(n), 2);
+    std::int64_t num = 2 * alternating_sign(k + 1) * power(factorial(n), 2);
     std::int64_t denom = k * k * factorial(n - k) * factorial(n + k);
     return static_cast<amrex::Real>(static_cast<double>(num) / static_cast<double>(denom));
 }
@@ -125,7 +125,7 @@ template <int ngrow> AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE constexpr amrex::R
     if (offset == 0)
         return 0;
 
-    std::int64_t num = 6 * sign(k_abs + 1) * power(factorial(n), 2);
+    std::int64_t num = 6 * alternating_sign(k_abs + 1) * power(factorial(n), 2);
     std::int64_t denom = power(k_abs, 3) * factorial(n - k_abs) * factorial(n + k_abs);
     double w = ((1.0 - static_cast<double>(k_abs * k_abs) * generalised_harmonic_number(n, 2)) *
                 static_cast<double>(num) / static_cast<double>(denom));
@@ -186,7 +186,7 @@ template <int ngrow, typename ArrayType, int dir> struct derivative_impl<ngrow, 
      * @param i First cell index.
      * @param j Second cell index.
      * @param k Third cell index.
-     * @param comp One-dimensional index of the MultiFab component.
+     * @param comp Component index in the MultiFab component range.
      * @param arr Reference to the array to evaluate stencil on.
      * @return Finite-difference stencil approximation of the first derivative of `arr[comp]` along `dir` at `(i,j,k)`.
      *
@@ -226,7 +226,7 @@ template <int ngrow, typename ArrayType, int dir0, int dir1> struct derivative_i
      * @param i First cell index.
      * @param j Second cell index.
      * @param k Third cell index.
-     * @param comp One-dimensional index of the MultiFab component.
+     * @param comp Component index in the MultiFab component range.
      * @param arr Reference to the array to evaluate stencil on.
      * @return Finite-difference stencil approximation of the second derivative of `arr[comp]` along `dir0, dir1` at
      * `(i, j, k)`.
@@ -286,7 +286,7 @@ struct derivative_impl<ngrow, ArrayType, dir0, dir1, dir2> {
      * @param i First cell index.
      * @param j Second cell index.
      * @param k Third cell index.
-     * @param comp One-dimensional index of the MultiFab component.
+     * @param comp Component index in the MultiFab component range.
      * @param arr Reference to the array to evaluate stencil on.
      * @return Finite-difference stencil approximation of the third derivative of `arr[comp]` along `dir0, dir1, dir2`
      * at
