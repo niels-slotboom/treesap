@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: MPL-2.0
 // Copyright (c) 2026 Niels Slotboom
 
+/**
+ * @file
+ * @brief See @ref example-01-wave-equation for details on this example.
+ */
+
 #pragma once
 
 #include "pde-model/PDEModelConcepts.hpp"        // <-- for RHSConcept

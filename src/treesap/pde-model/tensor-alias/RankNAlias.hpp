@@ -66,23 +66,33 @@ struct RankNAlias : public TensorAliasBase<RankNAlias<comp_base_, rank_, dim_, A
 
 // named specialisations for scalars, vectors, and up to rank 4 tensors
 
-/// @brief Alias for a rank-0 (scalar) tensor
+/**
+ * @brief Alias for a rank-0 (scalar) tensor
+ */
 template <int comp_base_, typename ArrayType = const amrex::Real, int dim_ = 3>
 using ScalarAlias = RankNAlias<comp_base_, 0, dim_, ArrayType>;
 
-/// @brief Alias for a rank-1 (vector) tensor
+/**
+ * @brief Alias for a rank-1 (vector) tensor
+ */
 template <int comp_base_, typename ArrayType = const amrex::Real, int dim_ = 3>
 using VectorAlias = RankNAlias<comp_base_, 1, dim_, ArrayType>;
 
-/// @brief Alias for a rank-2 tensor
+/**
+ * @brief Alias for a rank-2 tensor
+ */
 template <int comp_base_, typename ArrayType = const amrex::Real, int dim_ = 3>
 using Rank2Alias = RankNAlias<comp_base_, 2, dim_, ArrayType>;
 
-/// @brief Alias for a rank-3 tensor
+/**
+ * @brief Alias for a rank-3 tensor
+ */
 template <int comp_base_, typename ArrayType = const amrex::Real, int dim_ = 3>
 using Rank3Alias = RankNAlias<comp_base_, 3, dim_, ArrayType>;
 
-/// @brief Alias for a rank-4 tensor
+/**
+ * @brief Alias for a rank-4 tensor
+ */
 template <int comp_base_, typename ArrayType = const amrex::Real, int dim_ = 3>
 using Rank4Alias = RankNAlias<comp_base_, 4, dim_, ArrayType>;
 
