@@ -7,4 +7,4 @@ _Tremendously Efficient Sandbox for PDEs_
 - [Documentation](https://niels-slotboom.github.io/treesap/)
 - [GitHub Repository](https://github.com/niels-slotboom/treesap)
 - Setup Guide (to be added)
-- [Code Example 01 - Wave Equation](https://niels-slotboom.github.io/treesap/example-01-wave-equation.html)
+- [Code Examples](https://niels-slotboom.github.io/treesap/examples_index.html)
