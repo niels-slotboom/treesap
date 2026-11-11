@@ -87,10 +87,11 @@ Concretely, the `stencil` `namespace` provides us with compile-time unrolled imp
 To define the alias for the scalar $\phi$, we add the following lines to the body of the `WaveEqnRHS::operator()` implementation:
 ```cpp
 using namespace treesap;
+using namespace tensor;
 
-ScalarAlias<0> phi{{arr}};
+ScalarAlias<0> phi{{arr}}; // from treesap::tensor
 ```
-A `ScalarAlias` is simply a named variant of the more general `RankNAlias` tensor alias implementation for the `N = 0` case. Its template parameter is the value of `comp` where its indexing range starts; for the first field in a general variable vector $\Phi$, this is always 0. We call the `ScalarAlias` `phi`, since that is the name of the field we are aliasing. Lastly, we pass the initialiser list `{{arr}}` to initialise `phi`, so that it knows where the data is which it is aliasing. 
+A `ScalarAlias` is simply a named special case of the more general `RankNAlias` tensor alias implementation for the `N = 0` case. Its template parameter is the value of `comp` where its indexing range starts; for the first field in a general variable vector $\Phi$, this is always 0. We call the `ScalarAlias` `phi`, since that is the name of the field we are aliasing. Lastly, we pass the initialiser list `{{arr}}` to initialise `phi`, so that it knows where the data is which it is aliasing. 
 
 To add an alias for the vector field $\bold{u}$, we use a `VectorAlias` as follows:
 ```cpp
@@ -160,6 +161,7 @@ template <int comp>
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real operator()(int i, int j, int k, amrex::Real t, const amrex::Array4<const amrex::Real>& arr) const {
     // import namespaces for more concise code
     using namespace treesap;
+    using namespace tensor;
     using namespace stencil;
 
     // set up the aliases for field variables:
