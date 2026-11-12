@@ -16,6 +16,7 @@
 #include "pde-model/bcs/DirichletBC.hpp"
 #include "pde-model/rhs-decorators/ABLDecorator.hpp"
 #include "util/ScopedTimer.hpp"
+#include "util/named_tensors.hpp"
 
 int main(int argc, char** argv) {
     amrex::Initialize(argc, argv);
