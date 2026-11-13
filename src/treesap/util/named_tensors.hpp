@@ -31,7 +31,7 @@ template <int a, int b> constexpr int kronecker = ((a == b) ? 1 : 0);
  *
  * For \f$(a_1,...,a_d)=\f$`Indices...`, the template evaluates to the standard definition
  * \f[
- *      \varepsilon_{a_1...a_d} = \begin{cases}0,&a_i = a_j \text{for any} i \neq j,\\
+ *      \varepsilon_{a_1...a_d} = \begin{cases}0,&a_i = a_j \text{ for any } i \neq j,\\
  *                              1, &\text{if $(a_1,...,a_d)$ is an even permutation of $(1,...,d)$,}\\
  *                              -1, &\text{if $(a_1,...,a_d)$ is an odd permutation of $(1,...,d)$.}
  *                              \end{cases}
