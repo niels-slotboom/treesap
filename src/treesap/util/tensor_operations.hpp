@@ -21,10 +21,12 @@ namespace tensor {
  * @tparam End Upper bound of the interval (exclusive).
  * @tparam F Callable type with an operator() templated over a single integer index.
  * @param f Callable object to evaluate at each index. Must expose an single integer template parameter which is summed
- * over; this function sums f<Start>() + f<Start+1>() + ... + f<End-1>()
+ * over; this function sums `f<Start>() + f<Start+1>() + ... + f<End-1>()`
  * @return Accumulated result of the contraction.
  */
-template <int Start, int End, typename F> AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE constexpr auto contract(F&& f) {
+template <int Start, int End, typename F>
+    requires requires(F&& f) { f.template operator()<Start>(); }
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE constexpr auto contract(F&& f) {
     static_assert(Start <= End, "Start must be less than or equal to End.");
     return [&]<auto... Is>(std::integer_sequence<decltype(Start), Is...>) {
         using return_t = decltype(f.template operator()<Start>());
@@ -39,10 +41,12 @@ template <int Start, int End, typename F> AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLI
  * @tparam End Upper bound of the interval (exclusive).
  * @tparam F Callable type with an operator() templated over a single integer index.
  * @param f Callable object to evaluate at each index. Must expose an single integer template parameter which is summed
- * over; this function sums f<0>() + f<1>() + ... + f<End-1>()
+ * over; this function sums `f<0>() + f<1>() + ... + f<End-1>()`
  * @return Accumulated result of the contraction.
  */
-template <int End, typename F> AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE constexpr auto contract(F&& f) {
+template <int End, typename F>
+    requires requires(F&& f) { f.template operator()<0>(); }
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE constexpr auto contract(F&& f) {
     return contract<0, End>(std::forward<F>(f));
 }
 
@@ -50,10 +54,74 @@ template <int End, typename F> AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE constexp
  * @brief Computes the tensor contraction of a callable over the half-open interval [0, 3).
  * @tparam F Callable type with an operator() templated over a single integer index.
  * @param f Callable object to evaluate at each index. Must expose an single integer template parameter which is summed
- * over; this function sums f<0>() + f<1>() + f<2>()
+ * over; this function sums `f<0>() + f<1>() + f<2>()`
  * @return Accumulated result of the contraction.
  */
-template <typename F> AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE constexpr auto contract(F&& f) {
+template <typename F>
+    requires requires(F&& f) { f.template operator()<0>(); }
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE constexpr auto contract(F&& f) {
+    return contract<0, 3>(std::forward<F>(f));
+}
+
+/**
+ * @brief Computes the double tensor contraction of a callable over the Cartesian product of the half-open intervals
+ * [Start, End) x [Start, End).
+ * @tparam Start Lower bound of both intervals (inclusive).
+ * @tparam End Upper bound of both intervals (exclusive).
+ * @tparam F Callable type with an operator() templated over two integer indices.
+ * @param f Callable object to evaluate at each pair of indices. Must expose two integer template parameters which are
+ * summed over; this function sums `f<Start, Start>() + f<Start, Start+1>() + ... + f<End-1, End-1>()`, including all
+ * intermediate index combinations.
+ * @return Accumulated result of the double contraction.
+ */
+template <int Start, int End, typename F>
+    requires requires(F&& f) { f.template operator()<Start, Start>(); }
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE constexpr auto contract(F&& f) {
+    static_assert(Start <= End, "Start must be less than or equal to End.");
+
+    return [&]<auto... Is>(std::integer_sequence<decltype(Start), Is...>) {
+        using return_t = decltype(f.template operator()<Start, Start>());
+        return_t result{};
+
+        (([&]<auto I>() {
+             [&]<auto... Js>(std::integer_sequence<decltype(Start), Js...>) {
+                 ((result += f.template operator()<Start + I, Start + Js>()), ...);
+             }(std::make_integer_sequence<decltype(Start), End - Start>{});
+         }.template operator()<Is>()),
+         ...);
+
+        return result;
+    }(std::make_integer_sequence<decltype(Start), End - Start>{});
+}
+
+/**
+ * @brief Computes the double tensor contraction of a callable over the Cartesian product of the half-open intervals
+ * [0, End) x [0, End).
+ * @tparam End Upper bound of both intervals (exclusive).
+ * @tparam F Callable type with an operator() templated over two integer indices.
+ * @param f Callable object to evaluate at each pair of indices. Must expose two integer template parameters which are
+ * summed over; this function sums `f<0, 0>() + f<0, 1>() + ... + f<End-1, End-1>()`, including all intermediate index
+ * combinations.
+ * @return Accumulated result of the double contraction.
+ */
+template <int End, typename F>
+    requires requires(F&& f) { f.template operator()<0, 0>(); }
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE constexpr auto contract(F&& f) {
+    return contract<0, End>(std::forward<F>(f));
+}
+
+/**
+ * @brief Computes the double tensor contraction of a callable over the Cartesian product of the half-open intervals
+ * [0, 3) x [0, 3).
+ * @tparam F Callable type with an operator() templated over two integer indices.
+ * @param f Callable object to evaluate at each pair of indices. Must expose two integer template parameters which are
+ * summed over; this function sums `f<0, 0>() + f<0, 1>() + ... + f<2, 2>()`, including all intermediate index
+ * combinations.
+ * @return Accumulated result of the double contraction.
+ */
+template <typename F>
+    requires requires(F&& f) { f.template operator()<0, 0>(); }
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE constexpr auto contract(F&& f) {
     return contract<0, 3>(std::forward<F>(f));
 }
 
