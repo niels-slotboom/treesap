@@ -17,10 +17,15 @@
 #include "pde-model/rhs-decorators/ABLDecorator.hpp"
 #include "util/ScopedTimer.hpp"
 #include "util/named_tensors.hpp"
+#include "util/tensor_operations.hpp"
 
 int main(int argc, char** argv) {
+    auto val = treesap::tensor::contract<4, 6>([]<int a, int b, int c, int d>() { return 1; });
+    std::cout << val << std::endl;
+
     amrex::Initialize(argc, argv);
     {
+
         // --- set up the domain of the problem ---
         amrex::Box index_range{{0, 0, 0}, {256, 256, 256}};              // 256³ resolution
         amrex::RealBox coord_range{{-2.0, -2.0, -2.0}, {2.0, 2.0, 2.0}}; // coordinate domain [-2,2]³

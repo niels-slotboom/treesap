@@ -15,46 +15,34 @@ namespace treesap {
 
 namespace tensor {
 
-/**
- * @brief Computes the tensor contraction of a callable over the half-open interval [Start, End).
- * @tparam Start Lower bound of the interval (inclusive).
- * @tparam End Upper bound of the interval (exclusive).
- * @tparam F Callable type with an operator() templated over a single integer index.
- * @param f Callable object to evaluate at each index. Must expose an single integer template parameter which is summed
- * over; this function sums f<Start>() + f<Start+1>() + ... + f<End-1>()
- * @return Accumulated result of the contraction.
- */
-template <int Start, int End, typename F> AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE constexpr auto contract(F&& f) {
-    static_assert(Start <= End, "Start must be less than or equal to End.");
-    return [&]<auto... Is>(std::integer_sequence<decltype(Start), Is...>) {
-        using return_t = decltype(f.template operator()<Start>());
-        return_t result{};
-        ((result += f.template operator()<Start + Is>()), ...);
+template <typename F, int... Is>
+AMREX_GPU_HOST_DEVICE constexpr auto contract_return_type(F&& f, std::integer_sequence<int, Is...>)
+    -> decltype(f.template operator()<Is...>());
+
+template <int rank, int dim, typename F> AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE constexpr auto contract(F&& f) {
+    static_assert(rank >= 1);
+    return [&]<int... Is>(std::integer_sequence<int, Is...>) {
+        using ReturnType = decltype(contract_return_type(f, std::make_integer_sequence<int, rank>{}));
+        ReturnType result{};
+
+        if constexpr (rank == 1) { // sum over f directly
+            ((result += f.template operator()<Is>()), ...);
+        } else { // sum over sums recursively
+            ((result +=
+              contract<rank - 1, dim>([&]<int... Js>() -> ReturnType { return f.template operator()<Is, Js...>(); })),
+             ...);
+        }
+
         return result;
-    }(std::make_integer_sequence<decltype(Start), End - Start>{});
+    }(std::make_integer_sequence<int, dim>{});
 }
 
-/**
- * @brief Computes the tensor contraction of a callable over the half-open interval [0, End).
- * @tparam End Upper bound of the interval (exclusive).
- * @tparam F Callable type with an operator() templated over a single integer index.
- * @param f Callable object to evaluate at each index. Must expose an single integer template parameter which is summed
- * over; this function sums f<0>() + f<1>() + ... + f<End-1>()
- * @return Accumulated result of the contraction.
- */
-template <int End, typename F> AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE constexpr auto contract(F&& f) {
-    return contract<0, End>(std::forward<F>(f));
+template <int rank, typename F> AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE constexpr auto contract(F&& f) {
+    return contract<rank, 3, F>(std::forward<F>(f));
 }
 
-/**
- * @brief Computes the tensor contraction of a callable over the half-open interval [0, 3).
- * @tparam F Callable type with an operator() templated over a single integer index.
- * @param f Callable object to evaluate at each index. Must expose an single integer template parameter which is summed
- * over; this function sums f<0>() + f<1>() + f<2>()
- * @return Accumulated result of the contraction.
- */
 template <typename F> AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE constexpr auto contract(F&& f) {
-    return contract<0, 3>(std::forward<F>(f));
+    return contract<1, 3, F>(std::forward<F>(f));
 }
 
 /**

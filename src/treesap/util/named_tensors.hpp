@@ -1,10 +1,13 @@
-#pragma once
+// SPDX-License-Identifier: MPL-2.0
+// Copyright (c) 2026 Niels Slotboom
 
 /**
  * @file
  * @brief Defines the standard named tensors `treesap::tensor::kronecker` (\f$\delta_{ab}\f$) and
  * `treesap::tensor::levi_civita` (\f$\epsilon_{a_1...a_d}\f$) as compile-time evaluated templates.
  */
+
+#pragma once
 
 namespace treesap {
 namespace tensor {
@@ -43,8 +46,10 @@ constexpr int levi_civita = []() consteval {
     for (int i = 0; i < d; i++) {
         int a = indices[i];
         for (int j = i + 1; j < d; j++) {
+            if (a < 0 || a >= d)
+                return 0;
             int b = indices[j];
-            if (a == b || a < 0 || b < 0 || a >= d || b >= d)
+            if (a == b || b < 0 || b >= d)
                 return 0;
             if (a > b) {
                 indices[i] = b;

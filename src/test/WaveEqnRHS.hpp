@@ -29,8 +29,7 @@ template <int ngrow_> struct WaveEqnRHS {
         // constexpr if to decide which field comp belongs to
         if constexpr (phi.contains(comp)) {                                                  // phi_rhs implementation
             return contract([&]<int a>() { return derivative<ngrow, a>(i, j, k, u, {a}); }); // = ∂ₐuₐ(i,j,k)
-
-        } else if constexpr (u.contains(comp)) { // u_rhs implementation
+        } else if constexpr (u.contains(comp)) {                                             // u_rhs implementation
             // restore vector index into constexpr int a so we can use it as a template argument
             constexpr auto restored = u.restore_absolute(comp);
             constexpr int a = restored[0];
