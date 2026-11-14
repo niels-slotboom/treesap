@@ -22,7 +22,7 @@ namespace tensor {
  * @tparam ArrayType Type of the tensor components; defaults to `const amrex::Real`
  * @note Satisfies the `concept` `treesap::tensor::TensorAliasImplementation`.
  */
-template <int comp_base_, int dim_ = 3, typename ArrayType = const amrex::Real>
+template <int comp_base_ = 0, int dim_ = 3, typename ArrayType = const amrex::Real>
 struct SymRank2Alias : public TensorAliasBase<SymRank2Alias<comp_base_, dim_, ArrayType>, comp_base_,
                                               (dim_ * (dim_ + 1)) / 2, 2, dim_, ArrayType> {
     using Base = TensorAliasBase<SymRank2Alias<comp_base_, dim_, ArrayType>, comp_base_, (dim_ * (dim_ + 1)) / 2, 2,
