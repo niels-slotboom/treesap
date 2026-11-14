@@ -27,7 +27,7 @@ int main(int argc, char** argv) {
     amrex::Initialize(argc, argv);
     {
         // --- set up the domain of the problem ---
-        amrex::Box index_range{{0, 0, 0}, {256, 256, 256}};              // 256³ resolution
+        amrex::Box index_range{{0, 0, 0}, {255, 255, 255}};              // 256³ resolution
         amrex::RealBox coord_range{{-2.0, -2.0, -2.0}, {2.0, 2.0, 2.0}}; // coordinate domain [-2,2]³
         int is_per[] = {0, 0, 0};                                        // no periodic boundaries
         amrex::Geometry geom(index_range, &coord_range, amrex::CoordSys::cartesian, is_per);
@@ -46,7 +46,7 @@ int main(int argc, char** argv) {
         using ModelType = treesap::PDEModel<RHSType, InitType, BCType>;
 
         // --- instantiate PDE model ---
-        RHSType rhs(geom.data());                                              // RHS of the bulk PDE, without ABL terms
+        RHSType rhs(geom.data());                                              // RHS of the bulk PDE
         InitType init({"exp(-(x^2 + y^2 + z^2)/0.1^2)", "0.0", "0.0", "0.0"}); // functions used to initialise fields
         BCType bc{0.0, 0.0, 0.0, 0.0};                                         // boundary values set to 0
         ModelType model({"phi", "u_0", "u_1", "u_2"}, std::move(geom), dt, std::move(rhs), std::move(init),

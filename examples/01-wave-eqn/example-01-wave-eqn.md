@@ -16,22 +16,22 @@ $$
 Instead of the typical choice of defining an auxiliary scalar momentum \f$\pi = \partial_t \phi\f$, we opt to introduce a 3-component vector \f$\mathbf{u}\f$ with components \f$u_a\f$, where \f$a,b,...\f$ denote indices taking the values \f$0,1,2\f$. This might seem arbitrary and inconvenient; it will, however, allow us to use a larger subset of `TreESaP`'s features, making it more suited for this example. 
 
 Using the four variables \f$\Phi = (\phi,\mathbf{u})\f$, we may recast the wave equation into the two first-order equations
-\f[
+$$
     \begin{aligned}
-        \partial_t \phi &= \nabla \cdot \mathbf{u}, \\
+        \partial_t \phi &= \nabla \cdot \mathbf{u}, \newline
         \partial_t \mathbf{u} &= \nabla \phi.
     \end{aligned}
-\f]
+$$
 It is easily verified that under the above first-order equations, \f$\phi\f$ satisfies the wave equation.
 
 To implement this evolution system, we need it in index form, that is, in the form
-\f[
+$$
     \begin{aligned}
-        \partial_t \phi &= \partial_a u_a, \\
+        \partial_t \phi &= \partial_a u_a, \newline
         \partial_t u_a &= \partial_a \phi.
     \end{aligned}
-\f]
-where the Einstein summation convention is employed. The above is why we have chosen the parametrisation \f$(\phi,\mathbf{u})\f$ over the more conventional \f$(\phi,\pi)\f$; using the former gives us both a scalar and a vector, and we have an index contraction—both are `TrEESaP` aspects we wouldn't be able to try out in the latter case.
+$$
+where the Einstein summation convention is employed. The above is why we have chosen the parametrisation \f$(\phi,\mathbf{u})\f$ over the more conventional \f$(\phi,\pi)\f$; using the former gives us both a scalar and a vector, and we have an index contraction—both are `TreESaP` aspects we wouldn't be able to try out in the latter case.
 
 ### Implementing the WaveEqnRHS Functor
 In this section, we outline the structure of the right-hand side (RHS) functor implemented in `examples/01-wave-eqn/WaveEqnRHS.hpp`. We begin with the empty `struct` body, and add a check whether `treesap::RHSConcept` is satisfied:
@@ -47,7 +47,7 @@ template <int ngrow_> struct WaveEqnRHS {
 static_assert(treesap::RHSConcept<WaveEqnRHS<1>>);
 ```
 The template parameter `ngrow_` will define the stencil width, declaring how many neighbouring cells are used in any direction away from a given cell. The `static_assert` line checks if `treesap::RHSConcept` is satisfied in the `ngrow_ = 1` case, and aids us in verifying whether we have given a valid implementation of an `RHSFunctor` which can be used by the `TreESaP` time integrators. This concept checks:
-- whether there are `static` `constexpr` members `ngrow` and `ncomp`, providing information about stencil width an the amount of components the right-hand side has (in our case 4);
+- whether there are `static` `constexpr` members `ngrow` and `ncomp`, providing information about stencil width and the amount of components the right-hand side has (in our case 4);
 
 -  whether `WaveEqnRHS` defines a valid `operator()` implementation, which is marked `const`, has signature `(int i, int j, int k, amrex::Real time, const amrex::Array4<const amrex::Real>& arr) -> amrex::Real`, and is templated upon an integer parameter `comp`. 
 
@@ -75,12 +75,12 @@ There is already a lot going on here, so let us briefly unpack everything.
 
 - The `operator()`'s signature expects:
     + three grid indices `i,j,k`, which refer to the cell for which the current RHS evaluation is carried out;
-    + the `time` parameter allows us to implement a possible time-dependence of a PDE's right-hand side; we will not use it, but it is part of the required signature regardless;
+    + the `t` parameter allows us to implement a possible time-dependence of a PDE's right-hand side; we will not use it, but it is part of the required signature regardless;
     + `arr` is a reference to the chunk of data of which the cell at `(i,j,k)` is part of and which holds the data we need for our computations; 
     + `comp` is a compile-time parameter which determines which of the four equations we are currently dealing with, i.e. `comp = 0` means that we should compute the RHS of \f$\partial_t \phi = ...\f$, whereas `comp = 1,2,3` refer to the respective right-hand sides of \f$\partial_t u_a = ...\f$.
     + The `return` value of the `operator()` call should be the value of the respective RHS, as approximated by a finite-difference discretisation.
     
-    It is marked `const` since it should not change the state of the functor; evaluating the RHS of the PDE should not cause `dx_inv` to change.
+    It is marked `const` since it should not change the simulation parameters; evaluating the RHS of the PDE should not cause `dx_inv` to change.
 
 Implementing this function body might seem daunting, but `TreESaP` puts handy tools at our disposal that make it more or less a 1:1 translation from math to code. The relevant tools here are the `treesap::stencil` `namespace`, and the tensor aliasing system. To make them available, we include the following three files:
 ```cpp
@@ -146,7 +146,7 @@ contract([&]<int a>() { return derivative<ngrow, a>(i, j, k, u, {a}); });
 ```
 The outer call to `treesap::tensor::contract()` expects a lambda expression returning an `amrex::Real`, which it evaluates for `a = 0,1,2` and sums up. Inside the lambda, we must compute the (unsummed) discretisation \f$\partial_a u_a\f$, which we do by calling `treesap::stencil::derivative<>()`. Its arguments are as follows:
 
-+ `ncomp` sets the stencil width to whatever the user has configured;
++ `ngrow` sets the stencil width to whatever the user has configured;
 + the single additional template argument `int a` specifies that we are taking a first-order derivative along the direction `a`, that is, we are computing a discretised \f$\partial_a\f$;
 + `i,j,k` are the indices of the cell at which the stencil is centered;
 + passing `u` specifies that we are taking a derivative of the vector field `u`;
@@ -154,7 +154,7 @@ The outer call to `treesap::tensor::contract()` expects a lambda expression retu
 
 To make this a valid approximation of \f$\partial_a u_a\f$, we need to remember to multiply by `dx_inv` before returning.
 
-Turning our attention to the RHS for \f$\mathbf{u}\f$, that is, \f$\partial_t u_a = \partial_a u\f$, we can simply use `stencil::derivative<>()`, but this time, we have to restore the vector index `a` from `comp`. The tensor aliasing system provides functions for this: calling `u.restore_absolute(comp)` gives us the index (array) which tells us the component of `u` which `comp` is referring to. We hence implement this branch as
+Turning our attention to the RHS for \f$\mathbf{u}\f$, that is, \f$\partial_t u_a = \partial_a \phi\f$, we can simply use `stencil::derivative<>()`, but this time, we have to restore the vector index `a` from `comp`. The tensor aliasing system provides functions for this: calling `u.restore_absolute(comp)` gives us the index (array) which tells us the component of `u` which `comp` is referring to. We hence implement this branch as
 ```cpp
 // restore vector index into constexpr int a so we can use it as a template argument
 constexpr auto restored = u.restore_absolute(comp);
@@ -220,7 +220,7 @@ Our first step is to set up the domain. We opt for a \f$[-2,2]^3\f$ cube in Cart
 ```
 With these, we set up the domain in the form of an `amrex::Geometry` object named `geom` as follows:
 ```cpp
-amrex::Box index_range{{0, 0, 0}, {256, 256, 256}};              // 256³ resolution
+amrex::Box index_range{{0, 0, 0}, {255, 255, 255}};              // 256³ resolution
 amrex::RealBox coord_range{{-2.0, -2.0, -2.0}, {2.0, 2.0, 2.0}}; // coordinate domain [-2,2]³
 int is_per[] = {0, 0, 0};                                        // no periodic boundaries
 amrex::Geometry geom(index_range, &coord_range, amrex::CoordSys::cartesian, is_per);
@@ -258,7 +258,7 @@ For our `RHSType`, we use our custom-implemented `WaveEqnRHS`, with the compile-
 
 To create instances of these types with the correct parameters and to put them together into a `ModelType model`, we simply call their constructors:
 ```cpp
-RHSType rhs(geom.data());                                              // RHS of the bulk PDE, without ABL terms
+RHSType rhs(geom.data());                                              // RHS of the bulk PDE
 InitType init({"exp(-(x^2 + y^2 + z^2)/0.1^2)", "0.0", "0.0", "0.0"}); // functions used to initialise fields
 BCType bc{0.0, 0.0, 0.0, 0.0};                                         // boundary values set to 0
 ModelType model({"phi", "u_0", "u_1", "u_2"}, std::move(geom), dt, std::move(rhs), std::move(init),
