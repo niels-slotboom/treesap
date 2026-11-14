@@ -262,11 +262,11 @@ template <int ngrow, typename ArrayType, int dir0, int dir1> struct derivative_i
             std::decay_t<ArrayType> result = 0.0;
 #pragma unroll
             for (int s = 1; s <= ngrow; ++s) {
-                result +=
-                    weights::first<ngrow>(s) * (derivative<ngrow, ArrayType, dir1>(i + s * i_offset, j + s * j_offset,
-                                                                                   k + s * k_offset, comp, arr) -
-                                                derivative<ngrow, ArrayType, dir1>(i - s * i_offset, j - s * j_offset,
-                                                                                   k - s * k_offset, comp, arr));
+                result += weights::first<ngrow>(s) *
+                          (derivative_impl<ngrow, ArrayType, dir1>::eval(i + s * i_offset, j + s * j_offset,
+                                                                         k + s * k_offset, comp, arr) -
+                           derivative_impl<ngrow, ArrayType, dir1>::eval(i - s * i_offset, j - s * j_offset,
+                                                                         k - s * k_offset, comp, arr));
             }
             return result;
         }
@@ -327,11 +327,11 @@ struct derivative_impl<ngrow, ArrayType, dir0, dir1, dir2> {
             std::decay_t<ArrayType> result = 0.0;
 #pragma unroll
             for (int s = 1; s <= ngrow; ++s) {
-                result += weights::first<ngrow>(s) *
-                          (derivative<ngrow, ArrayType, udirs.second, udirs.second>(i + s * i_offset, j + s * j_offset,
-                                                                                    k + s * k_offset, comp, arr) -
-                           derivative<ngrow, ArrayType, udirs.second, udirs.second>(i - s * i_offset, j - s * j_offset,
-                                                                                    k - s * k_offset, comp, arr));
+                result +=
+                    weights::first<ngrow>(s) * (derivative_impl<ngrow, ArrayType, udirs.second, udirs.second>::eval(
+                                                    i + s * i_offset, j + s * j_offset, k + s * k_offset, comp, arr) -
+                                                derivative_impl<ngrow, ArrayType, udirs.second, udirs.second>::eval(
+                                                    i - s * i_offset, j - s * j_offset, k - s * k_offset, comp, arr));
             }
             return result;
         } else {
@@ -343,10 +343,10 @@ struct derivative_impl<ngrow, ArrayType, dir0, dir1, dir2> {
 #pragma unroll
             for (int s = 1; s <= ngrow; ++s) {
                 result += weights::first<ngrow>(s) *
-                          (derivative<ngrow, ArrayType, dir1, dir2>(i + s * i_offset, j + s * j_offset,
-                                                                    k + s * k_offset, comp, arr) -
-                           derivative<ngrow, ArrayType, dir1, dir2>(i - s * i_offset, j - s * j_offset,
-                                                                    k - s * k_offset, comp, arr));
+                          (derivative_impl<ngrow, ArrayType, dir1, dir2>::eval(i + s * i_offset, j + s * j_offset,
+                                                                               k + s * k_offset, comp, arr) -
+                           derivative_impl<ngrow, ArrayType, dir1, dir2>::eval(i - s * i_offset, j - s * j_offset,
+                                                                               k - s * k_offset, comp, arr));
             }
             return result;
         }
