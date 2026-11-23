@@ -3,6 +3,7 @@ set(SOURCES_EXAMPLE_01_WAVE_EQN
 )
 
 set(HEADERS_EXAMPLE_01_WAVE_EQN
+    WaveEqnRHS.hpp
 )
 
 
