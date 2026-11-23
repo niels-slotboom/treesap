@@ -31,6 +31,7 @@ struct RankNAlias : public TensorAliasBase<RankNAlias<comp_base_, rank_, dim_, A
                                  cexprmath::power(dim_, rank_), rank_, dim_, ArrayType>;
     using Base::dim;
     using Base::ncomp;
+    using Base::next;
     using Base::rank;
 
     /**

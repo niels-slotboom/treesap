@@ -29,6 +29,7 @@ struct SymRank2Alias : public TensorAliasBase<SymRank2Alias<comp_base_, dim_, Ar
                                  dim_, ArrayType>;
     using Base::dim;
     using Base::ncomp;
+    using Base::next;
     using Base::rank;
 
     /**

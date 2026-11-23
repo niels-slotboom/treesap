@@ -102,6 +102,8 @@ concept TensorAliasImplementation = requires { // check for ncomp, rank, dim
 
     typename std::integral_constant<int, Derived::dim>;
     requires Derived::dim > 0;
+
+    typename std::integral_constant<int, Derived::next>;
 } && requires(int comp, IndexArray<Derived::rank> tensor_indices) {
     // check for static restore_relative() and get_relative()
     { Derived::restore_relative(comp) } -> std::same_as<IndexArray<Derived::rank>>;
@@ -160,7 +162,7 @@ struct TensorAliasBase {
     using arr_t = ArrayType;
 
     /**
-     * @brief Lightweight, by-value snapshot of all tensor components of the alias at a single grid cell.
+     * @brief Lightweight, by-value snapshot of all components of a tensor at a single grid cell.
      *
      * Holds a local copy of the `ncomp` components that the alias spans, so they can be loaded from the MultiFab once
      * and then reused in subsequent computations without repeated memory accesses. Components are addressed with
@@ -168,6 +170,10 @@ struct TensorAliasBase {
      *
      * Instances are typically obtained via `TensorAliasBase::load(int, int, int)` and live purely in registers
      * or local memory; modifying a `Temporary` does not write back to the underlying MultiFab.
+     *
+     * Temporaries may also be used to store intermediate results, e.g. a
+     * `treesap::tensor::VectorAlias<>::Temporary` may be used to store the gradient of a
+     * `treesap::tensor::ScalarAlias`.
      */
     struct Temporary {
         using TemporaryArrayType = std::remove_cv_t<ArrayType>;
