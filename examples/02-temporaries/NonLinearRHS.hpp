@@ -17,19 +17,19 @@ template <int ngrow_> struct NonLinearRHS {
     static constexpr int ncomp = 2;
     static constexpr int ngrow = ngrow_;
 
-    amrex::Real dx_inv_sq;
-    amrex::Real gamma;
-
     // alias types must be defined outside of the operator() scope to be available for temporary definitions
     using PhiAliasType = treesap::tensor::ScalarAlias<0>;
     using PiAliasType = treesap::tensor::ScalarAlias<PhiAliasType::next>;
     static_assert(PiAliasType::next == ncomp); // ensure that we have the correct number of components
 
-    // per-thread scratch state for temporaries used across operator() invocations for different values of `comp`.
-    mutable PiAliasType::Temporary pi_temp;
+    amrex::Real dx_inv_sq;
+    amrex::Real gamma;
 
     AMREX_GPU_HOST_DEVICE explicit NonLinearRHS(const amrex::GeometryData& geom, amrex::Real gamma)
         : dx_inv_sq(1.0 / (geom.CellSize(0) * geom.CellSize(0))), gamma(gamma) {}
+
+    // per-thread scratch state for temporaries used across operator() invocations for different values of `comp`.
+    mutable PiAliasType::Temporary pi_temp;
 
     template <int comp>
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real operator()(int i, int j, int k, amrex::Real t,
@@ -51,9 +51,8 @@ template <int ngrow_> struct NonLinearRHS {
         }
 
         // constexpr if to decide which field comp belongs to
-        if constexpr (phi.contains(comp)) { // phi_rhs implementation
-            return pi_temp({});             // = pi(i,j,k) as stored in temporary
-
+        if constexpr (phi.contains(comp)) {       // phi_rhs implementation
+            return pi_temp({});                   // = pi(i,j,k) as stored in temporary
         } else if constexpr (pi.contains(comp)) { // pi_rhs implementation
             VectorAlias<>::Temporary phi_grad{};  // temporary to hold grad(phi)
             static_for<3>([&]<int a>() { phi_grad({a}) = derivative<ngrow, a>(i, j, k, phi, {}); });

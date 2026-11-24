@@ -1,4 +1,4 @@
-## Example 01 - Wave Equation {#example-01-wave-equation}
+# Example 01 - Wave Equation {#example-01-wave-equation}
 
 Welcome to the first code example, which is meant to illustrate the core features and idiomatic use of the `TreESaP` library. In particular, we will consider how one implements a numerical solver for the scalar wave equation, given by
 $$
@@ -8,7 +8,7 @@ using the compile-time tensor aliasing system, finite-difference stencil templat
 
 The code for this example is found in [`examples/01-wave-eqn/`](https://github.com/niels-slotboom/treesap/tree/main/examples/01-wave-eqn/).
 
-### Setting Up the Math Expressions
+## Setting Up the Math Expressions
 As a first step, we must break down our second-order continuum equation above into a first-order-in-time system of the form
 $$
     \partial_t \Phi = F(\Phi,t).
@@ -33,7 +33,7 @@ $$
 $$
 where the Einstein summation convention is employed. The above is why we have chosen the parametrisation \f$(\phi,\mathbf{u})\f$ over the more conventional \f$(\phi,\pi)\f$; using the former gives us both a scalar and a vector, and we have an index contraction—both are `TreESaP` aspects we wouldn't be able to try out in the latter case.
 
-### Implementing the WaveEqnRHS Functor
+## Implementing the WaveEqnRHS Functor
 In this section, we outline the structure of the right-hand side (RHS) functor implemented in `examples/01-wave-eqn/WaveEqnRHS.hpp`. We begin with the empty `struct` body, and add a check whether `treesap::RHSConcept` is satisfied:
 ```cpp
 #pragma once
@@ -193,7 +193,7 @@ AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real operator()(int i, int j, in
 ```
 Before moving on to use this `WaveEqnRHS` implementation to integrate the wave equation, let us briefly appreciate what the above does. Given any (positive) value of `ngrow`, the compiler turns the code we have written into fully unrolled stencils and index contractions, handling the `comp` indexing on the fly. Meanwhile, we ourselves have never had to bother writing out a stencil by hand, or dealing with the flattened one-dimensional layout of the `comp` list. Instead, we have written code that is roughly isomorphic to the math; we have listed the variables \f$(\phi,\mathbf{u})\f$ in the form of aliases, and used `treesap::stencil::derivative<>()` and `treesap::tensor::contract()` to represent the mathematical notions of the derivatives and index contractions that appear in the PDE system's right-hand sides. 
 
-### Setting Up a PDE Model
+## Setting Up a PDE Model
 Although the PDE's right-hand side is arguably one of the most involved parts in building a numerical solver, it does not constitute its entirety. In addition to the RHS, we need to specify its domain and its initial as well as boundary conditions. This information is suitably encompassed in the `treesap::PDEModel` class, which is what is passed to a concrete `treesap::Integrator`-implementing instance to integrate. More generally speaking, the `treesap::Integrator` virtual class is templated upon a type satisfying the `treesap::PDEModelConcept`, allowing the user to define custom `PDEModel` classes&mdash;but here, we use the built-in `treesap::PDEModel`. 
 
 In this section, we set up a `treesap::PDEModel` with function-based initial data (`treesap::FunctionInit`) and Dirichlet boundary conditions (`treesap::DirichletBC`).
@@ -269,7 +269,7 @@ The chosen math expressions for `init` create an initially stationary Gaussian p
 
 We now have a `model` ready to be passed into a `treesap::Integrator` implementation.
 
-### Integrating the PDE Model
+## Integrating the PDE Model
 To integrate the PDE defined by `model`, we must pass it to a derived `treesap::Integrator` implementation. We use the `TreESaP` library's `treesap::RK4Integrator` implementation, which we make available using the following include:
 ```cpp
 #include "integrators/RK4Integrator.hpp"
@@ -311,6 +311,6 @@ if (treesap::ScopedTimer::enabled) {
     treesap::ScopedTimer::printOverview();
 }
 ```
-### Relishing in the Results
+## Relishing in the Results
 Running the code we have developed in the above should lead to the following simulation output:
 ![Example 01 - Wave Equation Simulation Output](example-01-wave-eqn.gif){width=600}
