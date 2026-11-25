@@ -97,12 +97,14 @@ struct ABLDecorator {
      * @param comp Component index in the MultiFab component range.
      * @param time Current simulation time.
      * @param arr Data array view buffer.
+     * @param geom Geometry of the data from `arr`.
      * @return Adjusted right-hand side value.
      */
     template <int comp>
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real operator()(int i, int j, int k, amrex::Real time,
-                                                                    const amrex::Array4<const amrex::Real>& arr) const {
-        return rhs.template operator()<comp>(i, j, k, time, arr) -
+                                                                    const amrex::Array4<const amrex::Real>& arr,
+                                                                    const amrex::GeometryData& geom) const {
+        return rhs.template operator()<comp>(i, j, k, time, arr, geom) -
                sigma(i, j, k) * (arr(i, j, k, comp) - data.target_values[comp]);
     }
 

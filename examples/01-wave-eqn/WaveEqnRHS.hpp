@@ -17,13 +17,10 @@ template <int ngrow_> struct WaveEqnRHS {
     static constexpr int ncomp = 4;
     static constexpr int ngrow = ngrow_;
 
-    amrex::Real dx_inv;
-
-    AMREX_GPU_HOST_DEVICE explicit WaveEqnRHS(const amrex::GeometryData& geom) : dx_inv(1.0 / geom.CellSize(0)) {}
-
     template <int comp>
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real operator()(int i, int j, int k, amrex::Real t,
-                                                                    const amrex::Array4<const amrex::Real>& arr) const {
+                                                                    const amrex::Array4<const amrex::Real>& arr,
+                                                                    const amrex::GeometryData& geom) const {
         // import namespaces for more concise code
         using namespace treesap;
         using namespace tensor;
@@ -33,6 +30,9 @@ template <int ngrow_> struct WaveEqnRHS {
         ScalarAlias<0> phi{{arr}};      // component range {0}
         VectorAlias<phi.next> u{{arr}}; // component range {1,2,3}
         static_assert(u.next == ncomp); // ensure that we have the correct amount of components
+
+        // compute inverse grid spacing, assuming same spacing in all directions:
+        amrex::Real dx_inv = 1.0 / geom.CellSize(0);
 
         // constexpr if to decide which field comp belongs to
         if constexpr (phi.contains(comp)) { // phi_rhs implementation

@@ -22,18 +22,18 @@ template <int ngrow_> struct NonLinearRHS {
     using PiAliasType = treesap::tensor::ScalarAlias<PhiAliasType::next>;
     static_assert(PiAliasType::next == ncomp); // ensure that we have the correct number of components
 
-    amrex::Real dx_inv_sq;
     amrex::Real gamma;
 
-    AMREX_GPU_HOST_DEVICE explicit NonLinearRHS(const amrex::GeometryData& geom, amrex::Real gamma)
-        : dx_inv_sq(1.0 / (geom.CellSize(0) * geom.CellSize(0))), gamma(gamma) {}
+    AMREX_GPU_HOST_DEVICE explicit NonLinearRHS(amrex::Real gamma) : gamma(gamma) {}
 
-    // per-thread scratch state for temporaries used across operator() invocations for different values of `comp`.
+    // per-thread scratch state for temporaries and grid spacing used across operator() invocations for different values
+    // of `comp`.
     mutable PiAliasType::Temporary pi_temp;
 
     template <int comp>
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real operator()(int i, int j, int k, amrex::Real t,
-                                                                    const amrex::Array4<const amrex::Real>& arr) const {
+                                                                    const amrex::Array4<const amrex::Real>& arr,
+                                                                    const amrex::GeometryData& geom) const {
         // import namespaces for more concise code
         using namespace treesap;
         using namespace tensor;
@@ -58,7 +58,9 @@ template <int ngrow_> struct NonLinearRHS {
             static_for<3>([&]<int a>() { phi_grad({a}) = derivative<ngrow, a>(i, j, k, phi, {}); });
             amrex::Real grad_sq = contract([&]<int a>() { return phi_grad({a}) * phi_grad({a}); });
             amrex::Real laplacian = contract([&]<int a>() { return derivative<ngrow, a, a>(i, j, k, phi, {}); });
-            return dx_inv_sq * (laplacian - gamma * pi_temp({}) * grad_sq);
+
+            amrex::Real dx_inv = 1.0 / geom.CellSize(0);
+            return dx_inv * dx_inv * (laplacian - gamma * pi_temp({}) * grad_sq);
         } else {
             return NAN; // this should never be reached
         }

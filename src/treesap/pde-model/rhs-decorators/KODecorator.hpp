@@ -19,6 +19,7 @@ namespace treesap {
  * @tparam RHSType Underlying right-hand side model type.
  * @tparam order_ The order of the Kreiss-Oliger terms; Defaults to `RHSType::ngrow`.
  * @note Satisfies `treesap::RHSConcept`.
+ * @note Can be used with differing directional grid spacings \f$\Delta x\f$, \f$\Delta y\f$, \f$\Delta z\f$.
  *
  * Concretely, given a dissipation strength \f$\kappa>0\f$, the decoration wraps the original RHS \f$F = \verb|rhs|\f$
  * as
@@ -49,24 +50,25 @@ struct KODecorator {
      * @param comp Component index in the MultiFab component range.
      * @param time Current simulation time.
      * @param arr Data array view buffer.
+     * @param geom Geometry of the data from `arr`.
      * @return Combined right-hand side value with dissipation.
      */
     template <int comp>
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real operator()(int i, int j, int k, amrex::Real time,
-                                                                    const amrex::Array4<const amrex::Real>& arr) const {
+                                                                    const amrex::Array4<const amrex::Real>& arr,
+                                                                    const amrex::GeometryData& geom) const {
         using namespace stencil;
 
         amrex::Real ko_term = 0.0;
-        ko_term += kreiss_oliger<order, dir::x>(i, j, k, comp, arr);
-        ko_term += kreiss_oliger<order, dir::y>(i, j, k, comp, arr);
-        ko_term += kreiss_oliger<order, dir::z>(i, j, k, comp, arr);
+        ko_term += kreiss_oliger<order, dir::x>(i, j, k, comp, arr) / geom.CellSize(dir::x);
+        ko_term += kreiss_oliger<order, dir::y>(i, j, k, comp, arr) / geom.CellSize(dir::y);
+        ko_term += kreiss_oliger<order, dir::z>(i, j, k, comp, arr) / geom.CellSize(dir::z);
 
-        return rhs.template operator()<comp>(i, j, k, time, arr) + dx_inv * strength * ko_term;
+        return rhs.template operator()<comp>(i, j, k, time, arr, geom) + strength * ko_term;
     }
 
     RHSType rhs;          ///< Undecorated right-hand side functor.
     amrex::Real strength; ///< Dissipation strength factor \f$\kappa\f$.
-    amrex::Real dx_inv;   ///< Inverse grid spacing \f$1 / \Delta x\f$.
 };
 
 // Verify that KODecorator satisfies the right-hand side concept.

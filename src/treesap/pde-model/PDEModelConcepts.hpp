@@ -22,19 +22,27 @@ namespace treesap {
  * @tparam F Type to check against the concept.
  */
 template <typename F>
-concept RHSConcept = std::is_trivially_copyable_v<F> && requires {
-    typename std::integral_constant<int, F::ncomp>;
-    typename std::integral_constant<int, F::ngrow>;
-    requires F::ncomp > 0;
-    requires F::ngrow >= 0;
-} && requires(const F& f, int i, int j, int k, amrex::Real time, const amrex::Array4<const amrex::Real>& arr) {
-    // Use a compile-time constant (e.g., 0) as the template argument,
-    // assuming components are indexed from 0 up to F::ncomp - 1.
-    {
-        f.template operator()<0>(i, j, k, time, arr)
-    } -> std::convertible_to<amrex::Real>; // if this fails, check if operator() is marked const
-};
-
+concept RHSConcept = std::is_trivially_copyable_v<F> &&
+                     requires {
+                         typename std::integral_constant<int, F::ncomp>;
+                         typename std::integral_constant<int, F::ngrow>;
+                         requires F::ncomp > 0;
+                         requires F::ngrow >= 0;
+                     } &&
+                     requires(const F& f,
+                              int i,                                       ///< Grid cell index in X direction
+                              int j,                                       ///< Grid cell index in Y direction
+                              int k,                                       ///< Grid cell index in Z direction
+                              amrex::Real time,                            ///< Current simulation time
+                              const amrex::Array4<const amrex::Real>& arr, ///< View into source FAB data buffer
+                              const amrex::GeometryData& geom              ///< GPU-safe domain geometry data
+                     ) {
+                         // Use a compile-time constant (e.g., 0) as the template argument,
+                         // assuming components are indexed from 0 up to F::ncomp - 1.
+                         {
+                             f.template operator()<0>(i, j, k, time, arr, geom)
+                         } -> std::convertible_to<amrex::Real>; // if this fails, check if operator() is marked const
+                     };
 /**
  * @brief Verifies that a type implements boundary condition filling logic.
  * @tparam F Type to check against the concept.
@@ -48,15 +56,15 @@ concept BCConcept = std::is_trivially_copyable_v<F> &&
                         requires F::ngrow >= 0;
                     } &&
                     requires(const F& t,
-                             const amrex::IntVect& iv,               ///< 1. Grid cell index (i, j, k) being filled
-                             const amrex::Array4<amrex::Real>& dest, ///< 2. View into destination FAB data buffer
-                             int dcomp,                       ///< 3. Starting component index in destination to fill
-                             int numcomp,                     ///< 4. Number of components to process in this pass
-                             const amrex::GeometryData& geom, ///< 5. GPU-safe domain geometry data
-                             amrex::Real time,                ///< 6. Current simulation time
-                             const amrex::BCRec* bcr, ///< 7. Array of boundary condition specifiers per component
-                             int bcomp,               ///< 8. Component index offset into specifier array
-                             int orig_comp            ///< 9. Original component index in source data
+                             const amrex::IntVect& iv,               ///< Grid cell index (i, j, k) being filled
+                             const amrex::Array4<amrex::Real>& dest, ///<  View into destination FAB data buffer
+                             int dcomp,                       ///< Starting component index in destination to fill
+                             int numcomp,                     ///< Number of components to process in this pass
+                             const amrex::GeometryData& geom, ///< GPU-safe domain geometry data
+                             amrex::Real time,                ///< Current simulation time
+                             const amrex::BCRec* bcr,         ///< Array of boundary condition specifiers per component
+                             int bcomp,                       ///< Component index offset into specifier array
+                             int orig_comp                    ///< Original component index in source data
                     ) {
                         { t(iv, dest, dcomp, numcomp, geom, time, bcr, bcomp, orig_comp) } -> std::same_as<void>;
                     };
@@ -72,9 +80,9 @@ concept InitConcept = std::is_trivially_copyable_v<F> &&
                           requires F::ncomp > 0;
                       } &&
                       requires(const F& f,
-                               amrex::Real x, ///< 1. Physical coordinate in X direction
-                               amrex::Real y, ///< 2. Physical coordinate in Y direction
-                               amrex::Real z  ///< 3. Physical coordinate in Z direction
+                               amrex::Real x, ///< Physical coordinate in X direction
+                               amrex::Real y, ///< Physical coordinate in Y direction
+                               amrex::Real z  ///< Physical coordinate in Z direction
                       ) {
                           { f.template operator()<0>(x, y, z) } -> std::convertible_to<amrex::Real>;
                       };

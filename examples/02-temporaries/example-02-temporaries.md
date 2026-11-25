@@ -65,14 +65,13 @@ template <int ngrow_> struct NonLinearRHS {
 };
 ```
 
-In addition, we add the two relevant simulation parameters to the struct body, together with a constructor to initialise them:
+In addition, we add the simulation parameter \f$\gamma\f$ to the struct body, together with a constructor to initialise it:
 
 ```cpp
-amrex::Real dx_inv_sq;
 amrex::Real gamma;
 
-AMREX_GPU_HOST_DEVICE explicit NonLinearRHS(const amrex::GeometryData& geom, amrex::Real gamma)
-    : dx_inv_sq(1.0 / (geom.CellSize(0) * geom.CellSize(0))), gamma(gamma) {}
+AMREX_GPU_HOST_DEVICE explicit NonLinearRHS(amrex::Real gamma) 
+    : gamma(gamma) {}
 ```
 
 In further analogy to @subpage example-01-wave-equation, we add the standard tensor alias setup to the `operator()` implementation:
@@ -80,7 +79,8 @@ In further analogy to @subpage example-01-wave-equation, we add the standard ten
 ```cpp
 template <int comp>
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real operator()(int i, int j, int k, amrex::Real t,
-                                                                const amrex::Array4<const amrex::Real>& arr) const {
+                                                                const amrex::Array4<const amrex::Real>& arr,
+                                                                const amrex::GeometryData& geom) const {
     // import namespaces for more concise code
     using namespace treesap;
     using namespace tensor;
@@ -114,7 +114,6 @@ Concretely, we add the following member to the struct:
 ```cpp
  mutable PiAliasType::Temporary pi_temp;
 ``` 
-
 Our `operator()` implementation must initialise it during the first invocation, so that its value can be reused in subsequent ones. All TreESaP integrators evaluate RHS components starting from `comp = 0`, allowing us to do this by adding the following block to the `operator()` body, immediately after initialising the aliases `phi` and `pi`:
 
 ```cpp
@@ -165,10 +164,10 @@ Notice that, unlike `pi_temp`, the gradient temporary is declared locally within
 Once we have computed the squared norm of the gradient, all that remains is to construct the Laplacian of \f$\phi\f$ by contracting its second derivatives and assemble the final result:
 
 ```cpp
-amrex::Real laplacian = contract([&]<int a>() { 
-    return derivative<ngrow, a, a>(i, j, k, phi, {});
-});
-return dx_inv_sq * (laplacian - gamma * pi_temp({}) * grad_sq);
+amrex::Real laplacian = contract([&]<int a>() { return derivative<ngrow, a, a>(i, j, k, phi, {}); });
+
+amrex::Real dx_inv = 1.0 / geom.CellSize(0);
+return dx_inv * dx_inv * (laplacian - gamma * pi_temp({}) * grad_sq);
 ```
 
 ### Closing Remarks

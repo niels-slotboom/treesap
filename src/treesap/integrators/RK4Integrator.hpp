@@ -126,6 +126,7 @@ class RK4Integrator : public Integrator<PDEModelType> {
         }
 
         RHSType rhs_ = model.get_rhs(); // local copy for lambda capture
+        amrex::GeometryData geom = model.get_geometry().data();
 
         for (amrex::MFIter mfi(init); mfi.isValid(); ++mfi) {
             amrex::Box box = mfi.validbox();
@@ -138,10 +139,10 @@ class RK4Integrator : public Integrator<PDEModelType> {
                     // compute stage k_i for current voxel and accumulate
                     amrex::Real stage;
                     if constexpr (is_first) {
-                        stage = rhs_.template operator()<comp>(i, j, k, time_arg, init_arr);
+                        stage = rhs_.template operator()<comp>(i, j, k, time_arg, init_arr, geom);
                         acc_arr(i, j, k, comp) = init_arr(i, j, k, comp) + b * stage;
                     } else {
-                        stage = rhs_.template operator()<comp>(i, j, k, time_arg, arg_arr);
+                        stage = rhs_.template operator()<comp>(i, j, k, time_arg, arg_arr, geom);
                         acc_arr(i, j, k, comp) += b * stage;
                     }
 

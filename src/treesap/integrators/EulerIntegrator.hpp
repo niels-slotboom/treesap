@@ -62,6 +62,7 @@ class EulerIntegrator : public Integrator<PDEModelType> {
         // make local for lambda capture
         RHSType rhs = model.get_rhs();
         amrex::Real time_ = time;
+        amrex::GeometryData geom = model.get_geometry().data();
 
         for (amrex::MFIter mfi(state_old); mfi.isValid(); ++mfi) {
             const amrex::Box& box = mfi.validbox();
@@ -70,8 +71,8 @@ class EulerIntegrator : public Integrator<PDEModelType> {
 
             amrex::ParallelFor(box, [=] AMREX_GPU_DEVICE(int i, int j, int k) {
                 static_for<ncomp>([=] AMREX_GPU_DEVICE<int comp>() {
-                    arr_new(i, j, k, comp) =
-                        arr_old(i, j, k, comp) + delta_time * rhs.template operator()<comp>(i, j, k, time_, arr_old);
+                    arr_new(i, j, k, comp) = arr_old(i, j, k, comp) +
+                                             delta_time * rhs.template operator()<comp>(i, j, k, time_, arr_old, geom);
                 });
             });
         }

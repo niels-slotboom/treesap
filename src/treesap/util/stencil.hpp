@@ -19,7 +19,6 @@ namespace treesap {
  * @namespace treesap::stencil
  * @brief Defines compile-time resolved derivative stencils and related operators (up to third
  * derivatives, arbitrary stencil width).
- * @note It is assumed that \f$\Delta x = \Delta y = \Delta z\f$.
  * @note Multiplication of results by \f$1/\Delta x^k\f$ with \f$k\f$ the derivative order is **UP TO
  * THE USER**.
  */

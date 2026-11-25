@@ -58,29 +58,24 @@ static constexpr int ngrow = ngrow_; // forward the stencil width the user has s
 ```
 to the struct body.
 
-The second requirement is more involved, since we need to provide a discretisation of the right-hand sides of the first-order PDE formulation we have written above. To do this, we add the basic signature, as well as another (non-static) member and a constructor to the `WaveEqnRHS` body:
+The second requirement is more involved, since we need to provide a discretisation of the right-hand sides of the first-order PDE formulation we have written above. To do this, we add the basic signature of the required `operator()` implementation:
 ```cpp
-amrex::Real dx_inv;
-
-AMREX_GPU_HOST_DEVICE explicit WaveEqnRHS(const amrex::GeometryData& geom) : dx_inv(1.0 / geom.CellSize(0)) {}
-
 template <int comp>
-AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real operator()(int i, int j, int k, amrex::Real t, const amrex::Array4<const amrex::Real>& arr) const {
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real operator()(int i, int j, int k, amrex::Real t,
+                                                                const amrex::Array4<const amrex::Real>& arr,
+                                                                const amrex::GeometryData& geom) const {
     // to be implemented...
 }
 ``` 
-There is already a lot going on here, so let us briefly unpack everything.
+There is already a lot going on here, so let us briefly unpack everything. The `operator()`'s signature expects:
++ three grid indices `i,j,k`, which refer to the cell for which the current RHS evaluation is carried out;
++ the `t` parameter allows us to implement a possible time-dependence of a PDE's right-hand side; we will not use it, but it is part of the required signature regardless;
++ `arr` is a reference to the chunk of data of which the cell at `(i,j,k)` is part of and which holds the data we need for our computations; 
++ `comp` is a compile-time parameter which determines which of the four equations we are currently dealing with, i.e. `comp = 0` means that we should compute the RHS of \f$\partial_t \phi = ...\f$, whereas `comp = 1,2,3` refer to the respective right-hand sides of \f$\partial_t u_a = ...\f$.
++ `geom` provides the relevant grid information, such as its spacing \f$(\Delta x, \Delta y, \Delta z)\f$. We will assume \f$\Delta x = \Delta y = \Delta z\f$.
++ The `return` value of the `operator()` call should be the value of the respective RHS, as approximated by a finite-difference discretisation.
 
-- The member `dx_inv` is meant to hold the inverse grid spacing \f$1/\Delta x\f$, which is needed to multiply the stencil implementations provided by `namespace treesap::stencil` to approximate derivatives. The `dx_inv` member gets initialised by the constructor.
-
-- The `operator()`'s signature expects:
-    + three grid indices `i,j,k`, which refer to the cell for which the current RHS evaluation is carried out;
-    + the `t` parameter allows us to implement a possible time-dependence of a PDE's right-hand side; we will not use it, but it is part of the required signature regardless;
-    + `arr` is a reference to the chunk of data of which the cell at `(i,j,k)` is part of and which holds the data we need for our computations; 
-    + `comp` is a compile-time parameter which determines which of the four equations we are currently dealing with, i.e. `comp = 0` means that we should compute the RHS of \f$\partial_t \phi = ...\f$, whereas `comp = 1,2,3` refer to the respective right-hand sides of \f$\partial_t u_a = ...\f$.
-    + The `return` value of the `operator()` call should be the value of the respective RHS, as approximated by a finite-difference discretisation.
-    
-    It is marked `const` since it should not change the simulation parameters; evaluating the RHS of the PDE should not cause `dx_inv` to change.
+It is marked `const` since it should not change the simulation parameters; evaluating the RHS of the PDE should not cause `dx_inv` to change.
 
 Implementing this function body might seem daunting, but `TreESaP` puts handy tools at our disposal that make it more or less a 1:1 translation from math to code. The relevant tools here are the `treesap::stencil` `namespace`, and the tensor aliasing system. To make them available, we include the following three files:
 ```cpp
@@ -112,7 +107,9 @@ static_assert(u.next == ncomp);
 This leaves us with the following `operator()`:
 ```cpp
 template <int comp>
-AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real operator()(int i, int j, int k, amrex::Real t, const amrex::Array4<const amrex::Real>& arr) const {
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real operator()(int i, int j, int k, amrex::Real t,
+                                                                const amrex::Array4<const amrex::Real>& arr,
+                                                                const amrex::GeometryData& geom) const {
     // import namespaces for more concise code
     using namespace treesap;
     using namespace tensor;
@@ -152,7 +149,11 @@ The outer call to `treesap::tensor::contract()` expects a lambda expression retu
 + passing `u` specifies that we are taking a derivative of the vector field `u`;
 + `{a}` is the index (array) which specifies the component of which we are taking a derivative.
 
-To make this a valid approximation of \f$\partial_a u_a\f$, we need to remember to multiply by `dx_inv` before returning.
+To make this a valid approximation of \f$\partial_a u_a\f$, we need to remember to multiply by `dx_inv` before returning, which we compute outside the component branching using
+```cpp
+amrex::Real dx_inv = 1.0 / geom.CellSize(0);
+```
+This makes the implicit assumption that the cell size is the same in all three axes, i.e. that \f$\Delta x = \Delta y = \Delta z\f$.
 
 Turning our attention to the RHS for \f$\mathbf{u}\f$, that is, \f$\partial_t u_a = \partial_a \phi\f$, we can simply use `stencil::derivative<>()`, but this time, we have to restore the vector index `a` from `comp`. The tensor aliasing system provides functions for this: calling `u.restore_absolute(comp)` gives us the index (array) which tells us the component of `u` which `comp` is referring to. We hence implement this branch as
 ```cpp
@@ -165,7 +166,9 @@ return dx_inv * derivative<ngrow, a>(i, j, k, phi, {/*no indices*/}); // = âˆ‚â‚
 Putting all of the above together, we arrive at the `operator()` implementation
 ```cpp
 template <int comp>
-AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real operator()(int i, int j, int k, amrex::Real t, const amrex::Array4<const amrex::Real>& arr) const {
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real operator()(int i, int j, int k, amrex::Real t,
+                                                                const amrex::Array4<const amrex::Real>& arr,
+                                                                const amrex::GeometryData& geom) const {
     // import namespaces for more concise code
     using namespace treesap;
     using namespace tensor;
@@ -175,6 +178,9 @@ AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real operator()(int i, int j, in
     ScalarAlias<0> phi{{arr}};      // component range {0}
     VectorAlias<phi.next> u{{arr}}; // component range {1,2,3}
     static_assert(u.next == ncomp); // ensure that we have the correct amount of components
+
+    // compute inverse grid spacing, assuming same spacing in all directions:
+    amrex::Real dx_inv = 1.0 / geom.CellSize(0);
 
     // constexpr if to decide which field comp belongs to
     if constexpr (phi.contains(comp)) { // phi_rhs implementation
@@ -258,7 +264,7 @@ For our `RHSType`, we use our custom-implemented `WaveEqnRHS`, with the compile-
 
 To create instances of these types with the correct parameters and to put them together into a `ModelType model`, we simply call their constructors:
 ```cpp
-RHSType rhs(geom.data());                                              // RHS of the bulk PDE
+RHSType rhs{};                                              // RHS of the PDE
 InitType init({"exp(-(x^2 + y^2 + z^2)/0.1^2)", "0.0", "0.0", "0.0"}); // functions used to initialise fields
 BCType bc{0.0, 0.0, 0.0, 0.0};                                         // boundary values set to 0
 ModelType model({"phi", "u_0", "u_1", "u_2"}, std::move(geom), dt, std::move(rhs), std::move(init),

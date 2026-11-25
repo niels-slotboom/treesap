@@ -46,7 +46,7 @@ int main(int argc, char** argv) {
         using ModelType = treesap::PDEModel<RHSType, InitType, BCType>;
 
         // --- instantiate PDE model ---
-        RHSType rhs(geom.data(), 0.1);                           // RHS of the PDE
+        RHSType rhs(0.1);                                        // RHS of the PDE
         InitType init({"exp(-(x^2 + y^2 + z^2)/0.1^2)", "0.0"}); // functions used to initialise fields
         BCType bc{0.0, 0.0};                                     // boundary values set to 0
         ModelType model({"phi", "pi"}, std::move(geom), dt, std::move(rhs), std::move(init), std::move(bc));
