@@ -55,12 +55,11 @@ template <int ngrow_> struct NonLinearRHS {
             return pi_temp({});                   // = pi(i,j,k) as stored in temporary
         } else if constexpr (pi.contains(comp)) { // pi_rhs implementation
             VectorAlias<>::Temporary phi_grad{};  // temporary to hold grad(phi)
-            static_for<3>([&]<int a>() { phi_grad({a}) = derivative<ngrow, a>(i, j, k, phi, {}); });
+            static_for<3>([&]<int a>() { phi_grad({a}) = derivative<ngrow, a>(i, j, k, phi, {}, geom); });
             amrex::Real grad_sq = contract([&]<int a>() { return phi_grad({a}) * phi_grad({a}); });
-            amrex::Real laplacian = contract([&]<int a>() { return derivative<ngrow, a, a>(i, j, k, phi, {}); });
+            amrex::Real laplacian = contract([&]<int a>() { return derivative<ngrow, a, a>(i, j, k, phi, {}, geom); });
 
-            amrex::Real dx_inv = 1.0 / geom.CellSize(0);
-            return dx_inv * dx_inv * (laplacian - gamma * pi_temp({}) * grad_sq);
+            return (laplacian - gamma * pi_temp({}) * grad_sq);
         } else {
             return NAN; // this should never be reached
         }

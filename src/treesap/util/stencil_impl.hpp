@@ -4,13 +4,14 @@
 /**
  * @file
  * @brief Provides private implementations for compile-time unrolled finite-difference stencil weights and derivative
- * operators for AMReX arrays.
+ * operators for AMReX arrays, including grid-spacing scaling.
  */
 
 #pragma once
 #include <AMReX.H>
 #include <AMReX_Array.H>
 #include <AMReX_Array4.H>
+#include <AMReX_Geometry.H>
 
 #include "cexprmath.hpp"
 
@@ -162,16 +163,18 @@ template <int ngrow, typename ArrayType, int... Dirs> struct derivative_impl {
      * @param k Grid cell index in \f$z\f$-direction.
      * @param comp Component index in the MultiFab component range.
      * @param arr Reference to the array to evaluate stencil on.
+     * @param geom GPU-safe domain geometry data used to determine grid scaling factors.
      * @return Zero.
      *
-     * @note This function should never be called; it is the fallback for the situation where no explicit implementation
-     * of `derivative_impl::eval` exists.
+     * @note This function specialisation should never be called; it is the fallback for the situation where no explicit
+     * implementation of `derivative_impl::eval` exists.
      *
      * The implementation of derivative stencils is deferred to this struct template because function templates do not
      * allow partial template specialisation.
      */
     static AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE ArrayType eval(int i, int j, int k, int comp,
-                                                                   const amrex::Array4<ArrayType>& arr) {
+                                                                   const amrex::Array4<ArrayType>& arr,
+                                                                   const amrex::GeometryData& geom) {
         return 0;
     }
 };
@@ -194,24 +197,28 @@ template <int ngrow, typename ArrayType, int dir> struct derivative_impl<ngrow, 
      * @param k Grid cell index in \f$z\f$-direction.
      * @param comp Component index in the MultiFab component range.
      * @param arr Reference to the array to evaluate stencil on.
+     * @param geom GPU-safe domain geometry data used to determine grid scaling factors.
      * @return Finite-difference stencil approximation of the first derivative of `arr[comp]` along `dir` at `(i,j,k)`.
      *
      * The implementation of derivative stencils is deferred to this struct template because function templates do not
      * allow partial template specialisation.
      */
     static AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE ArrayType eval(int i, int j, int k, int comp,
-                                                                   const amrex::Array4<ArrayType>& arr) {
+                                                                   const amrex::Array4<ArrayType>& arr,
+                                                                   const amrex::GeometryData& geom) {
         constexpr int i_offset = (dir == stencil::dir::x);
         constexpr int j_offset = (dir == stencil::dir::y);
         constexpr int k_offset = (dir == stencil::dir::z);
 
-        std::decay_t<ArrayType> result = 0.0;
+        amrex::Real grid_fac = 1.0 / geom.CellSize(dir);
+
+        std::decay_t<ArrayType> stencil = 0.0;
 #pragma unroll
         for (int s = 1; s <= ngrow; ++s) {
-            result += weights::first<ngrow>(s) * (arr(i + s * i_offset, j + s * j_offset, k + s * k_offset, comp) -
-                                                  arr(i - s * i_offset, j - s * j_offset, k - s * k_offset, comp));
+            stencil += weights::first<ngrow>(s) * (arr(i + s * i_offset, j + s * j_offset, k + s * k_offset, comp) -
+                                                   arr(i - s * i_offset, j - s * j_offset, k - s * k_offset, comp));
         }
-        return result;
+        return grid_fac * stencil;
     }
 };
 
@@ -234,6 +241,7 @@ template <int ngrow, typename ArrayType, int dir0, int dir1> struct derivative_i
      * @param k Grid cell index in \f$z\f$-direction.
      * @param comp Component index in the MultiFab component range.
      * @param arr Reference to the array to evaluate stencil on.
+     * @param geom GPU-safe domain geometry data used to determine grid scaling factors.
      * @return Finite-difference stencil approximation of the second derivative of `arr[comp]` along `dir0, dir1` at
      * `(i, j, k)`.
      *
@@ -241,34 +249,40 @@ template <int ngrow, typename ArrayType, int dir0, int dir1> struct derivative_i
      * allow partial template specialisation.
      */
     static AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE ArrayType eval(int i, int j, int k, int comp,
-                                                                   const amrex::Array4<ArrayType>& arr) {
+                                                                   const amrex::Array4<ArrayType>& arr,
+                                                                   const amrex::GeometryData& geom) {
         if constexpr (dir0 == dir1) { // unmixed derivative
+            amrex::Real grid_fac = 1.0 / (geom.CellSize(dir0) * geom.CellSize(dir1));
+
             constexpr int i_offset = (dir0 == stencil::dir::x);
             constexpr int j_offset = (dir0 == stencil::dir::y);
             constexpr int k_offset = (dir0 == stencil::dir::z);
 
-            std::decay_t<ArrayType> result = weights::second<ngrow>(0) * arr(i, j, k, comp);
+            std::decay_t<ArrayType> stencil = weights::second<ngrow>(0) * arr(i, j, k, comp);
 #pragma unroll
             for (int s = 1; s <= ngrow; ++s) {
-                result += weights::second<ngrow>(s) * (arr(i + s * i_offset, j + s * j_offset, k + s * k_offset, comp) +
-                                                       arr(i - s * i_offset, j - s * j_offset, k - s * k_offset, comp));
+                stencil +=
+                    weights::second<ngrow>(s) * (arr(i + s * i_offset, j + s * j_offset, k + s * k_offset, comp) +
+                                                 arr(i - s * i_offset, j - s * j_offset, k - s * k_offset, comp));
             }
-            return result;
+            return grid_fac * stencil;
         } else {
+            amrex::Real grid_fac = 1.0 / (geom.CellSize(dir0)); // the first derivative calls handle the other factor
+
             constexpr int i_offset = (dir0 == stencil::dir::x);
             constexpr int j_offset = (dir0 == stencil::dir::y);
             constexpr int k_offset = (dir0 == stencil::dir::z);
 
-            std::decay_t<ArrayType> result = 0.0;
+            std::decay_t<ArrayType> stencil = 0.0;
 #pragma unroll
             for (int s = 1; s <= ngrow; ++s) {
-                result += weights::first<ngrow>(s) *
-                          (derivative_impl<ngrow, ArrayType, dir1>::eval(i + s * i_offset, j + s * j_offset,
-                                                                         k + s * k_offset, comp, arr) -
-                           derivative_impl<ngrow, ArrayType, dir1>::eval(i - s * i_offset, j - s * j_offset,
-                                                                         k - s * k_offset, comp, arr));
+                stencil += weights::first<ngrow>(s) *
+                           (derivative_impl<ngrow, ArrayType, dir1>::eval(i + s * i_offset, j + s * j_offset,
+                                                                          k + s * k_offset, comp, arr, geom) -
+                            derivative_impl<ngrow, ArrayType, dir1>::eval(i - s * i_offset, j - s * j_offset,
+                                                                          k - s * k_offset, comp, arr, geom));
             }
-            return result;
+            return grid_fac * stencil;
         }
     }
 };
@@ -294,61 +308,71 @@ struct derivative_impl<ngrow, ArrayType, dir0, dir1, dir2> {
      * @param k Grid cell index in \f$z\f$-direction.
      * @param comp Component index in the MultiFab component range.
      * @param arr Reference to the array to evaluate stencil on.
+     * @param geom GPU-safe domain geometry data used to determine grid scaling factors.
      * @return Finite-difference stencil approximation of the third derivative of `arr[comp]` along `dir0, dir1, dir2`
-     * at
-     * `(i, j, k)`.
+     * at `(i, j, k)`.
      *
      * The implementation of derivative stencils is deferred to this struct template because function templates do not
      * allow partial template specialisation.
      */
     static AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE ArrayType eval(int i, int j, int k, int comp,
-                                                                   const amrex::Array4<ArrayType>& arr) {
+                                                                   const amrex::Array4<ArrayType>& arr,
+                                                                   const amrex::GeometryData& geom) {
+
         if constexpr (dir0 == dir1 && dir1 == dir2) { // unmixed derivative
+            amrex::Real grid_fac = 1.0 / (geom.CellSize(dir0) * geom.CellSize(dir1) * geom.CellSize(dir2));
+
             constexpr int i_offset = (dir0 == stencil::dir::x);
             constexpr int j_offset = (dir0 == stencil::dir::y);
             constexpr int k_offset = (dir0 == stencil::dir::z);
 
-            std::decay_t<ArrayType> result = 0.0;
+            std::decay_t<ArrayType> stencil = 0.0;
 #pragma unroll
             for (int s = 1; s <= ngrow; ++s) {
-                result += weights::third<ngrow>(s) * (arr(i + s * i_offset, j + s * j_offset, k + s * k_offset, comp) -
-                                                      arr(i - s * i_offset, j - s * j_offset, k - s * k_offset, comp));
+                stencil += weights::third<ngrow>(s) * (arr(i + s * i_offset, j + s * j_offset, k + s * k_offset, comp) -
+                                                       arr(i - s * i_offset, j - s * j_offset, k - s * k_offset, comp));
             }
-            return result;
+            return grid_fac * stencil;
         } else if constexpr (dir0 == dir1 || dir0 == dir2 ||
                              dir1 == dir2) { // derivative like xxy, two in the same direction
-            constexpr std::pair<int, int> udirs =
-                (dir0 == dir1) ? std::pair<int, int>{dir2, dir0} : std::pair<int, int>{dir0, dir1};
+            constexpr std::pair<int, int> udirs = (dir0 == dir1)   ? std::pair<int, int>{dir2, dir0}
+                                                  : (dir0 == dir2) ? std::pair<int, int>{dir1, dir0}
+                                                                   : std::pair<int, int>{dir0, dir1};
             // udirs.first is the single derivative, udirs.second the double derivative
+            amrex::Real grid_fac =
+                1.0 / (geom.CellSize(udirs.first)); // the second derivative call handles the other factors
+
             constexpr int i_offset = (udirs.first == stencil::dir::x);
             constexpr int j_offset = (udirs.first == stencil::dir::y);
             constexpr int k_offset = (udirs.first == stencil::dir::z);
             // hence take a first derivative along udirs.first of derivative<ngrow,udirs.second,udirs.second>(...)
-            std::decay_t<ArrayType> result = 0.0;
+            std::decay_t<ArrayType> stencil = 0.0;
 #pragma unroll
             for (int s = 1; s <= ngrow; ++s) {
-                result +=
-                    weights::first<ngrow>(s) * (derivative_impl<ngrow, ArrayType, udirs.second, udirs.second>::eval(
-                                                    i + s * i_offset, j + s * j_offset, k + s * k_offset, comp, arr) -
-                                                derivative_impl<ngrow, ArrayType, udirs.second, udirs.second>::eval(
-                                                    i - s * i_offset, j - s * j_offset, k - s * k_offset, comp, arr));
+                stencil += weights::first<ngrow>(s) *
+                           (derivative_impl<ngrow, ArrayType, udirs.second, udirs.second>::eval(
+                                i + s * i_offset, j + s * j_offset, k + s * k_offset, comp, arr, geom) -
+                            derivative_impl<ngrow, ArrayType, udirs.second, udirs.second>::eval(
+                                i - s * i_offset, j - s * j_offset, k - s * k_offset, comp, arr, geom));
             }
-            return result;
+            return grid_fac * stencil;
         } else {
+            amrex::Real grid_fac = 1.0 / (geom.CellSize(dir0)); // the second derivative call handles the other factors
+
             constexpr int i_offset = (dir0 == stencil::dir::x);
             constexpr int j_offset = (dir0 == stencil::dir::y);
             constexpr int k_offset = (dir0 == stencil::dir::z);
 
-            std::decay_t<ArrayType> result = 0.0;
+            std::decay_t<ArrayType> stencil = 0.0;
 #pragma unroll
             for (int s = 1; s <= ngrow; ++s) {
-                result += weights::first<ngrow>(s) *
-                          (derivative_impl<ngrow, ArrayType, dir1, dir2>::eval(i + s * i_offset, j + s * j_offset,
-                                                                               k + s * k_offset, comp, arr) -
-                           derivative_impl<ngrow, ArrayType, dir1, dir2>::eval(i - s * i_offset, j - s * j_offset,
-                                                                               k - s * k_offset, comp, arr));
+                stencil += weights::first<ngrow>(s) *
+                           (derivative_impl<ngrow, ArrayType, dir1, dir2>::eval(i + s * i_offset, j + s * j_offset,
+                                                                                k + s * k_offset, comp, arr, geom) -
+                            derivative_impl<ngrow, ArrayType, dir1, dir2>::eval(i - s * i_offset, j - s * j_offset,
+                                                                                k - s * k_offset, comp, arr, geom));
             }
-            return result;
+            return grid_fac * stencil;
         }
     }
 };

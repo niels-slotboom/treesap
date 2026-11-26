@@ -19,8 +19,6 @@ namespace treesap {
  * @namespace treesap::stencil
  * @brief Defines compile-time resolved derivative stencils and related operators (up to third
  * derivatives, arbitrary stencil width).
- * @note Multiplication of results by \f$1/\Delta x^k\f$ with \f$k\f$ the derivative order is **UP TO
- * THE USER**.
  */
 namespace stencil {
 /**
@@ -29,16 +27,15 @@ namespace stencil {
  * @tparam ArrayType Type of the data stored in the `arr` argument.
  * @tparam Dirs... Up to three directions along which derivatives are approximated.
  * @note The derivative stencils are unrolled at compile time and do not produce runtime call overhead.
- * @note To obtain an approximation of a derivative, the return value of this function must be multiplied by
- * \f$1/\Delta x^k\f$ where \f$k\f$ is its order.
  * @param i Grid cell index in \f$x\f$-direction.
  * @param j Grid cell index in \f$y\f$-direction.
  * @param k Grid cell index in \f$z\f$-direction.
  * @param comp Component index in the MultiFab component range.
  * @param arr Reference to the array to evaluate stencil on.
- * @return A finite-difference approximation of \f$\Delta x \partial_a
- * \,\verb|arr|(\verb|i, j, k, comp|)\f$, \f$\Delta x^2 \partial_a \partial_b
- * \,\verb|arr|(\verb|i, j, k, comp|)\f$ or \f$\Delta x^3 \partial_a \partial_b \partial_c\,\verb|arr|(\verb|i, j, k,
+ * @param geom GPU-safe domain geometry data used to determine grid scaling factors.
+ * @return A finite-difference approximation of \f$\partial_a
+ * \,\verb|arr|(\verb|i, j, k, comp|)\f$, \f$\partial_a \partial_b
+ * \,\verb|arr|(\verb|i, j, k, comp|)\f$ or \f$\partial_a \partial_b \partial_c\,\verb|arr|(\verb|i, j, k,
  * comp|)\f$.
  *
  * The stencil width is `2 * ngrow + 1`, and requires `arr` to provide `ngrow` ghost cells. The number of directions
@@ -47,10 +44,11 @@ namespace stencil {
  */
 template <int ngrow, typename ArrayType, int... Dirs>
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE ArrayType derivative(int i, int j, int k, int comp,
-                                                              const amrex::Array4<ArrayType>& arr) {
+                                                              const amrex::Array4<ArrayType>& arr,
+                                                              const amrex::GeometryData& geom) {
     static_assert(((Dirs >= 0 && Dirs <= 2) && ...),
                   "All direction template parameters must be between 0 and 2 (inclusive)");
-    return stencil_impl::derivative_impl<ngrow, ArrayType, Dirs...>::eval(i, j, k, comp, arr);
+    return stencil_impl::derivative_impl<ngrow, ArrayType, Dirs...>::eval(i, j, k, comp, arr, geom);
 }
 
 /**
@@ -59,14 +57,13 @@ AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE ArrayType derivative(int i, int j, int 
  * @tparam ArrayType Type of the data stored in the `arr` argument.
  * @tparam Dirs... Up to three directions along which derivatives are approximated.
  * @note The derivative stencils are unrolled at compile time and do not produce runtime call overhead.
- * @note To obtain an approximation of a derivative, the return value of this function must be multiplied by
- * \f$1/\Delta x^k\f$ where \f$k\f$ is its order.
  * @param idx Index vector of the center cell.
  * @param comp Component index in the MultiFab component range.
  * @param arr Reference to the array to evaluate stencil on.
- * @return A finite-difference approximation of \f$\Delta x \partial_a
- * \,\verb|arr|(\verb|idx, comp|)\f$, \f$\Delta x^2 \partial_a \partial_b
- * \,\verb|arr|(\verb|idx, comp|)\f$ or \f$\Delta x^3 \partial_a \partial_b \partial_c\,\verb|arr|(\verb|idx, comp|)\f$.
+ * @param geom GPU-safe domain geometry data used to determine grid scaling factors.
+ * @return A finite-difference approximation of \f$\partial_a
+ * \,\verb|arr|(\verb|idx, comp|)\f$, \f$\partial_a \partial_b
+ * \,\verb|arr|(\verb|idx, comp|)\f$ or \f$\partial_a \partial_b \partial_c\,\verb|arr|(\verb|idx, comp|)\f$.
  *
  * The stencil width is `2 * ngrow + 1`, and requires `arr` to provide `ngrow` ghost cells. The number of directions
  * provided in `int... Dir` defines the derivative order; up to third derivatives are implemented. For implementation
@@ -74,10 +71,11 @@ AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE ArrayType derivative(int i, int j, int 
  */
 template <int ngrow, typename ArrayType, int... Dirs>
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE ArrayType derivative(amrex::IntVect idx, int comp,
-                                                              const amrex::Array4<ArrayType>& arr) {
+                                                              const amrex::Array4<ArrayType>& arr,
+                                                              const amrex::GeometryData& geom) {
     static_assert(((Dirs >= 0 && Dirs <= 2) && ...),
                   "All direction template parameters must be between 0 and 2 (inclusive)");
-    return stencil_impl::derivative_impl<ngrow, ArrayType, Dirs...>::eval(idx[0], idx[1], idx[2], comp, arr);
+    return stencil_impl::derivative_impl<ngrow, ArrayType, Dirs...>::eval(idx[0], idx[1], idx[2], comp, arr, geom);
 }
 
 // --- --- --- KREISS-OLIGER DISSIPATION TERMS --- --- ---
@@ -87,14 +85,13 @@ AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE ArrayType derivative(amrex::IntVect idx
  * @tparam dir Coordinate direction along which KO operator is evaluated.
  * @tparam ArrayType Type of the data stored in the `arr` argument.
  * @note The KO stencils are unrolled at compile time and do not produce runtime call overhead.
- * @note To obtain the value of the KO operator evaluation, the return value of this function must be multiplied by
- * \f$1/\Delta x\f$ independent of its order.
  * @param i Grid cell index in \f$x\f$-direction.
  * @param j Grid cell index in \f$y\f$-direction.
  * @param k Grid cell index in \f$z\f$-direction.
  * @param comp Component index in the MultiFab component range.
  * @param arr Reference to the array to evaluate stencil on.
- * @return Value of the KO operator evaluation \f$\Delta x \mathcal{D}_\text{KO}\verb|arr|(\verb|i, j, k, comp|)\f$.
+ * @param geom GPU-safe domain geometry data used to determine the grid-spacing factor.
+ * @return Value of the KO operator evaluation \f$\mathcal{D}_\text{KO}\verb|arr|(\verb|i, j, k, comp|)\f$.
  *
  * The stencil width is `2 * order + 1`, and requires `arr` to provide `ngrow = order` ghost cells. In this context, the
  * Kreiss-Oliger dissipation term of order \f$r = \verb|order|\f$ is normalised as
@@ -108,7 +105,8 @@ AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE ArrayType derivative(amrex::IntVect idx
  */
 template <int order, int dir, typename ArrayType>
 AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE ArrayType kreiss_oliger(int i, int j, int k, int comp,
-                                                                 const amrex::Array4<ArrayType>& arr) {
+                                                                 const amrex::Array4<ArrayType>& arr,
+                                                                 const amrex::GeometryData& geom) {
     using namespace cexprmath;
 
     static_assert(order > 0, "Can only apply Kreiss-Oliger stencil for ngrow >= 1");
@@ -118,6 +116,7 @@ AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE ArrayType kreiss_oliger(int i, int j, i
 
     constexpr int r = order;
     constexpr double norm = 1.0 / static_cast<double>(power(2, 2 * order));
+    amrex::Real grid_fac = 1.0 / geom.CellSize(dir);
 
     std::decay_t<ArrayType> result = -binom(2 * r, r) * arr(i, j, k, comp);
 #pragma unroll
@@ -126,7 +125,7 @@ AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE ArrayType kreiss_oliger(int i, int j, i
                   (arr(i + s * i_offset, j + s * j_offset, k + s * k_offset, comp) +
                    arr(i - s * i_offset, j - s * j_offset, k - s * k_offset, comp));
     }
-    return result * norm;
+    return result * norm * grid_fac;
 }
 
 } // namespace stencil

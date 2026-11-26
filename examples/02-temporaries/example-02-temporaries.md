@@ -41,7 +41,8 @@ Two quantities in this formulation are particularly interesting from the perspec
 
 ```cpp
 amrex::Real grad = contract([&]<int a>(){
-    return derivative<ngrow,a>(i,j,k,phi,{}) * derivative<ngrow,a>(i,j,k,phi,{});
+    return derivative<ngrow,a>(i,j,k,phi,{},geom) * 
+           derivative<ngrow,a>(i,j,k,phi,{},geom);
 });
 ```
 
@@ -150,7 +151,7 @@ More concretely, this is carried out by adding the following to the `pi_rhs` bra
 ```cpp
 VectorAlias<>::Temporary phi_grad{};  // temporary to hold grad(phi)
 static_for<3>([&]<int a>() {
-     phi_grad({a}) = derivative<ngrow, a>(i, j, k, phi, {});
+     phi_grad({a}) = derivative<ngrow, a>(i, j, k, phi, {}, geom);
 });
 amrex::Real grad_sq = contract([&]<int a>() { 
     return phi_grad({a}) * phi_grad({a}); 
@@ -161,13 +162,12 @@ In the first line, we instantiate the vector temporary. The subsequent call to `
 
 Notice that, unlike `pi_temp`, the gradient temporary is declared locally within `operator()`. This is sufficient because its contents are only needed during the current invocation: there is no need to preserve them across RHS component evaluations. Both temporaries use the same underlying `Temporary` mechanism, but their different lifetimes reflect their different purposes.
 
-Once we have computed the squared norm of the gradient, all that remains is to construct the Laplacian of \f$\phi\f$ by contracting its second derivatives and assemble the final result:
+Once we have computed the squared norm of the gradient, all that remains is to construct the Laplacian of \f$\phi\f$ by contracting its second derivatives and to assemble the final result:
 
 ```cpp
-amrex::Real laplacian = contract([&]<int a>() { return derivative<ngrow, a, a>(i, j, k, phi, {}); });
+amrex::Real laplacian = contract([&]<int a>() { return derivative<ngrow, a, a>(i, j, k, phi, {}, geom); });
 
-amrex::Real dx_inv = 1.0 / geom.CellSize(0);
-return dx_inv * dx_inv * (laplacian - gamma * pi_temp({}) * grad_sq);
+return (laplacian - gamma * pi_temp({}) * grad_sq);
 ```
 
 ### Closing Remarks

@@ -49,7 +49,7 @@ static_assert(treesap::RHSConcept<WaveEqnRHS<1>>);
 The template parameter `ngrow_` will define the stencil width, declaring how many neighbouring cells are used in any direction away from a given cell. The `static_assert` line checks if `treesap::RHSConcept` is satisfied in the `ngrow_ = 1` case, and aids us in verifying whether we have given a valid implementation of an `RHSFunctor` which can be used by the `TreESaP` time integrators. This concept checks:
 - whether there are `static` `constexpr` members `ngrow` and `ncomp`, providing information about stencil width and the amount of components the right-hand side has (in our case 4);
 
--  whether `WaveEqnRHS` defines a valid `operator()` implementation, which is marked `const`, has signature `(int i, int j, int k, amrex::Real time, const amrex::Array4<const amrex::Real>& arr) -> amrex::Real`, and is templated upon an integer parameter `comp`. 
+-  whether `WaveEqnRHS` defines a valid `operator()` implementation, which is marked `const`, has signature `(int i, int j, int k, amrex::Real time, const amrex::Array4<const amrex::Real>& arr, const amrex::GeometryData& geom) -> amrex::Real`, and is templated upon an integer parameter `comp`. 
 
 The first requirement is straightforward to satisfy: we simply add the lines
 ```cpp
@@ -75,7 +75,7 @@ There is already a lot going on here, so let us briefly unpack everything. The `
 + `geom` provides the relevant grid information, such as its spacing \f$(\Delta x, \Delta y, \Delta z)\f$. We will assume \f$\Delta x = \Delta y = \Delta z\f$.
 + The `return` value of the `operator()` call should be the value of the respective RHS, as approximated by a finite-difference discretisation.
 
-It is marked `const` since it should not change the simulation parameters; evaluating the RHS of the PDE should not cause `dx_inv` to change.
+It is marked `const` since it should not change the simulation parameters; evaluating the RHS of the PDE should not cause simulation parameters to change&mdash;in this example, we have none, but other PDEs might have things like coupling constants.
 
 Implementing this function body might seem daunting, but `TreESaP` puts handy tools at our disposal that make it more or less a 1:1 translation from math to code. The relevant tools here are the `treesap::stencil` `namespace`, and the tensor aliasing system. To make them available, we include the following three files:
 ```cpp
@@ -139,7 +139,7 @@ The `phi_rhs` branch should return a discretisation of \f$\partial_t \phi = \par
 ```cpp
 using namespace stencil;
 
-contract([&]<int a>() { return derivative<ngrow, a>(i, j, k, u, {a}); });
+contract([&]<int a>() { return derivative<ngrow, a>(i, j, k, u, {a}, geom); });
 ```
 The outer call to `treesap::tensor::contract()` expects a lambda expression returning an `amrex::Real`, which it evaluates for `a = 0,1,2` and sums up. Inside the lambda, we must compute the (unsummed) discretisation \f$\partial_a u_a\f$, which we do by calling `treesap::stencil::derivative<>()`. Its arguments are as follows:
 
@@ -148,12 +148,7 @@ The outer call to `treesap::tensor::contract()` expects a lambda expression retu
 + `i,j,k` are the indices of the cell at which the stencil is centered;
 + passing `u` specifies that we are taking a derivative of the vector field `u`;
 + `{a}` is the index (array) which specifies the component of which we are taking a derivative.
-
-To make this a valid approximation of \f$\partial_a u_a\f$, we need to remember to multiply by `dx_inv` before returning, which we compute outside the component branching using
-```cpp
-amrex::Real dx_inv = 1.0 / geom.CellSize(0);
-```
-This makes the implicit assumption that the cell size is the same in all three axes, i.e. that \f$\Delta x = \Delta y = \Delta z\f$.
++ `geom` allows the `derivative` implementation to apply grid scaling factors.
 
 Turning our attention to the RHS for \f$\mathbf{u}\f$, that is, \f$\partial_t u_a = \partial_a \phi\f$, we can simply use `stencil::derivative<>()`, but this time, we have to restore the vector index `a` from `comp`. The tensor aliasing system provides functions for this: calling `u.restore_absolute(comp)` gives us the index (array) which tells us the component of `u` which `comp` is referring to. We hence implement this branch as
 ```cpp
@@ -161,7 +156,7 @@ Turning our attention to the RHS for \f$\mathbf{u}\f$, that is, \f$\partial_t u_
 constexpr auto restored = u.restore_absolute(comp);
 constexpr int a = restored[0];
 
-return dx_inv * derivative<ngrow, a>(i, j, k, phi, {/*no indices*/}); // = ∂ₐφ(i,j,k)
+return derivative<ngrow, a>(i, j, k, phi, {/*no indices*/}, geom); // = ∂ₐφ(i,j,k)
 ```
 Putting all of the above together, we arrive at the `operator()` implementation
 ```cpp
@@ -179,19 +174,16 @@ AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real operator()(int i, int j, in
     VectorAlias<phi.next> u{{arr}}; // component range {1,2,3}
     static_assert(u.next == ncomp); // ensure that we have the correct amount of components
 
-    // compute inverse grid spacing, assuming same spacing in all directions:
-    amrex::Real dx_inv = 1.0 / geom.CellSize(0);
-
     // constexpr if to decide which field comp belongs to
     if constexpr (phi.contains(comp)) { // phi_rhs implementation
-        return dx_inv * contract([&]<int a>() { return derivative<ngrow, a>(i, j, k, u, {a}); }); // = ∂ₐuᵃ(i,j,k)
+        return contract([&]<int a>() { return derivative<ngrow, a>(i, j, k, u, {a}, geom); }); // = ∂ₐuᵃ(i,j,k)
 
     } else if constexpr (u.contains(comp)) { // u_rhs implementation
         // restore vector index into constexpr int a so we can use it as a template argument
         constexpr auto restored = u.restore_absolute(comp);
         constexpr int a = restored[0];
 
-        return dx_inv * derivative<ngrow, a>(i, j, k, phi, {/*no indices*/}); // = ∂ₐφ(i,j,k)
+        return derivative<ngrow, a>(i, j, k, phi, {/*no indices*/}, geom); // = ∂ₐφ(i,j,k)
     } else {
         return NAN; // this should never be reached
     }
