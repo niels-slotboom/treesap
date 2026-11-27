@@ -21,11 +21,13 @@ template <int ncomp_, int ngrow_> struct NoOpRHS {
     static constexpr int ncomp = ncomp_;
     static constexpr int ngrow = ngrow_;
 
+    struct Workspace {}; // empty workspace; no temporaries
+
     /// Does nothing; returns zero.
     template <int comp>
     AMREX_GPU_HOST_DEVICE amrex::Real operator()(const amrex::IntVect idx, amrex::Real time,
                                                  const amrex::Array4<const amrex::Real>& arr,
-                                                 const amrex::GeometryData& geom) const {
+                                                 const amrex::GeometryData& geom, Workspace& workspace) const {
         return 0.0;
     }
 };

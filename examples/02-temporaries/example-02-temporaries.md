@@ -4,13 +4,13 @@ In this example, we consider tensor temporaries (`treesap::tensor::TensorAliasBa
 
 ## What Are Temporaries?
 
-To understand temporaries, we should first recall what a tensor alias — that is, a `Derived` implementation of `treesap::tensor::TensorAliasBase` — represents. A tensor alias does not own any memory; rather, it provides a *view* into an existing `amrex::Array4` reference. It abstracts away the conversion between tensor indices and the corresponding `Array4` component indices, with these conversions being evaluable at compile time.
+To understand temporaries, we should first recall what a tensor alias — that is, a `Derived` implementation of `treesap::tensor::TensorAliasBase` — represents. A tensor alias does not own any memory; rather, it provides a *view* into an existing `amrex::Array4` reference. It abstracts away the conversion between tensor indices and the corresponding `Array4` component indices, where these conversions can be evaluated at compile time.
 
 Consequently, a tensor alias can only refer to data that is already stored somewhere in memory. In practice, however, we often want to store intermediate tensorial quantities without writing them back to the underlying grid data. Consider, for example, the Christoffel symbols of a metric. Typically, the metric itself is an evolution variable, whereas its Christoffel symbols are derived quantities. We can compute the latter on the fly during an RHS evaluation, but may still need to retain the resulting values for subsequent operations or RHS component evaluations. This calls for a separate storage mechanism.
 
 This is precisely what a *temporary* provides. Conceptually, we want an object that:
 
-- owns its own memory, sufficient to store exactly one instance of the tensor;
+- owns its own memory, sufficient to store a single instance of the tensor;
 - supports the same tensor-indexing convention as its corresponding alias;
 - can be used independently of the underlying `amrex::Array4` data.
 
@@ -37,7 +37,7 @@ $$
 
 obtained by introducing the auxiliary variable \f$\pi = \partial_t \phi\f$.
 
-Two quantities in this formulation are particularly interesting from the perspective of intermediate storage. Firstly, the local field value of \f$\pi\f$ appears in both RHS components. We would therefore like to load it from global memory only once and retain it in a temporary for subsequent reuse. Secondly, the gradient \f$\nabla\phi\f$ enters through its squared norm, \f$|\nabla\phi|^2\f$. We can evaluate the gradient once into a `treesap::tensor::VectorAlias::Temporary` and subsequently compute its squared norm, rather than relying on compiler optimisations to eliminate duplicate stencil evaluations in an expression such as
+Two quantities in this formulation are particularly interesting from the perspective of intermediate storage. Firstly, the local field value of \f$\pi\f$ appears in both RHS components. We would therefore like to load it from the underlying grid data only once and retain it in a temporary for subsequent reuse. Secondly, the gradient \f$\nabla\phi\f$ enters through its squared norm, \f$|\nabla\phi|^2\f$. We can evaluate the gradient once into a `treesap::tensor::VectorAlias::Temporary` and subsequently compute its squared norm, rather than relying on compiler optimisations to eliminate duplicate stencil evaluations in an expression such as
 
 ```cpp
 amrex::Real grad = contract([&]<int a>(){
@@ -81,7 +81,8 @@ In further analogy to @subpage example-01-wave-equation, we add the standard ten
 template <int comp>
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real operator()(const amrex::IntVect idx, amrex::Real t,
                                                                 const amrex::Array4<const amrex::Real>& arr,
-                                                                const amrex::GeometryData& geom) const {
+                                                                const amrex::GeometryData& geom,
+                                                                Workspace& workspace) const {
     // import namespaces for more concise code
     using namespace treesap;
     using namespace tensor;
@@ -106,37 +107,34 @@ AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real operator()(const amrex::Int
 
 Since \f$\pi\f$ appears in both the RHS for \f$\partial_t \phi\f$ and that for \f$\partial_t \pi\f$, we would like to load it from global memory only once and store it in a temporary for subsequent reuse. There is, however, a complication: `operator()` is invoked separately for each RHS component (once for `comp = 0`, and again for `comp = 1`). Consequently, the temporary must survive the scope boundary between these invocations.
 
-A natural first instinct might be to declare a `static` variable within the `operator()` scope. This would be unsuitable, however, since multiple GPU threads could end up accessing the same memory location. Instead, we store the temporary as a member of the `NonLinearRHS` struct. Under the execution model employed by the TreESaP integrators, each thread operates on its own copy of the RHS functor, allowing the member to serve as per-thread scratch storage.
+This is what the `Workspace` member type is meant to do. In it, we list as members the objects we want to persist across the component invocations of `operator()` at a single grid cell. The integrator instantiates a `Workspace` for each grid-point evaluation and passes a reference to it to `operator()`. The same instance is shared across all component evaluations at that grid point, but is discarded once those evaluations are complete. Since we want to persist `pi`, we implement it as:
+```cpp
+struct Workspace {
+    PiAliasType::Temporary pi;
+};
+```
 
-There is one additional consideration: the `treesap::RHSConcept` contract requires the `operator()` implementation to be `const`. This ensures that its invocation cannot modify the simulation parameters stored in the functor, such as \f$\gamma\f$. Since our scratch temporary must nevertheless be modified, we declare it `mutable`.
-
-Concretely, we add the following member to the struct:
+Our `operator()` implementation must initialise the temporary during the first component evaluation, so that its value is available to subsequent evaluations. The current TreESaP integrators evaluate RHS components sequentially, starting from `comp = 0`. We can therefore use a compile-time condition to initialise the temporary only during the first invocation, by adding the following block immediately after setting up the aliases `phi` and `pi`:
 
 ```cpp
- mutable PiAliasType::Temporary pi_temp;
-``` 
-Our `operator()` implementation must initialise it during the first invocation, so that its value can be reused in subsequent ones. All TreESaP integrators evaluate RHS components starting from `comp = 0`, allowing us to do this by adding the following block to the `operator()` body, immediately after initialising the aliases `phi` and `pi`:
-
-```cpp
-// prepare scratch state temporaries if comp == 0, i.e. the first operator() evaluation
+// Initialise the workspace temporary during the first component evaluation.
 if constexpr (comp == 0) {
-    pi_temp = pi.load(idx); // load pi value from memory
-                                // just once, so it can be reused for
-                                // the comp = 0 and comp = 1 evaluation.
+    workspace.pi = pi.load(idx); // load pi from the underlying grid data once,
+                                 // for reuse in subsequent component evaluations.
 }
 ```
 
 For a tensor alias, the `.load(idx)` method loads the entire tensor at the given grid point \f$(idx)\f$ into its associated temporary. In principle, for a scalar quantity, one could simply use an `amrex::Real` as a temporary variable. For higher-rank tensors, however, this quickly becomes cumbersome, and it is preferable to use `TensorAliasBase::Temporary` uniformly for all tensorial quantities.
 
-Having loaded the local value of \f$\pi\f$ into `pi_temp`, we can now use it to evaluate the RHS of \f$\partial_t \phi\f$ by amending its `if constexpr` branch as follows:
+Having loaded the local value of \f$\pi\f$ into `workspace.pi`, we can now use it to evaluate the RHS of \f$\partial_t \phi\f$ by amending its `if constexpr` branch as follows:
 
 ```cpp
 if constexpr (phi.contains(comp)) { // phi_rhs implementation
-    return pi_temp({});             // = pi(idx) as stored in temporary
+    return workspace.pi({}); // = pi(idx) as stored in temporary
 } 
 ```
 
-The `{}` argument is provided because a `Temporary` expects tensor indices to be passed, whereas a scalar has none — hence the empty `treesap::tensor::IndexArray`. We will access `pi_temp` in the same way when implementing the RHS of \f$\partial_t \pi\f$ below.
+The `{}` argument is provided because a `Temporary` expects tensor indices to be passed, whereas a scalar has none&mdash;hence the empty `treesap::tensor::IndexArray`. We will access `workspace.pi` in the same way when implementing the RHS of \f$\partial_t \pi\f$ below.
 
 ### The \f$\nabla\phi\f$ Temporary
 
@@ -158,18 +156,18 @@ amrex::Real grad_sq = contract([&]<int a>() {
 });
 ```
 
-In the first line, we instantiate the vector temporary. The subsequent call to `static_for` populates each of its components with the corresponding derivative stencil value. The reason for using `static_for` rather than an ordinary `for` loop is that the directions `a` must be known at compile time in order to be used as template parameters. The call to `static_for<3>` therefore instantiates and calls the supplied lambda for \f$a = 0, 1, 2\f$, effectively unrolling the loop at compile time.
+In the first line, we instantiate the vector temporary. The subsequent `static_for` call populates its components with the corresponding derivative stencil value. The reason for using `static_for` rather than an ordinary `for` loop is that the directions `a` must be known at compile time in order to be used as template parameters. The call to `static_for<3>` therefore instantiates and calls the supplied lambda for \f$a = 0, 1, 2\f$, effectively unrolling the loop at compile time.
 
-Notice that, unlike `pi_temp`, the gradient temporary is declared locally within `operator()`. This is sufficient because its contents are only needed during the current invocation: there is no need to preserve them across RHS component evaluations. Both temporaries use the same underlying `Temporary` mechanism, but their different lifetimes reflect their different purposes.
+Notice that, unlike `pi`, the gradient temporary is declared locally within `operator()`. This is sufficient because its contents are only needed during the current invocation: there is no need to preserve them across RHS component evaluations, and hence we do not need to write it into `workspace`. Both temporaries use the same underlying `Temporary` mechanism, but their different lifetimes reflect their different purposes.
 
 Once we have computed the squared norm of the gradient, all that remains is to construct the Laplacian of \f$\phi\f$ by contracting its second derivatives and to assemble the final result:
 
 ```cpp
 amrex::Real laplacian = contract([&]<int a>() { return derivative<ngrow, a, a>(phi, {}, idx, geom); });
 
-return (laplacian - gamma * pi_temp({}) * grad_sq);
+return (laplacian - gamma * workspace.pi({}) * grad_sq);
 ```
 
 ### Closing Remarks
 
-This example illustrates two complementary uses of tensor temporaries: storing intermediate quantities locally within an RHS evaluation, as demonstrated by \f$\nabla\phi\f$, and retaining scratch state across multiple RHS component evaluations, as demonstrated by \f$\pi\f$. In both cases, the associated `Temporary` provides an indexing interface consistent with its tensor alias while owning its own storage. This makes temporaries particularly useful for intermediate tensorial computations, allowing derived quantities to be stored and reused without introducing additional evolution variables or writing intermediate results to global memory.
+This example illustrates two complementary uses of tensor temporaries: storing intermediate quantities locally within an RHS evaluation, as demonstrated by \f$\nabla\phi\f$, and retaining scratch state inside `workspace` across multiple RHS component evaluations, as demonstrated by \f$\pi\f$. In both cases, the associated `Temporary` provides an indexing interface consistent with its tensor alias while owning its own storage. This makes temporaries particularly useful for intermediate tensorial computations, allowing derived quantities to be stored and reused without introducing additional evolution variables or writing intermediate results to global memory.

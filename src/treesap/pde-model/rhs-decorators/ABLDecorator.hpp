@@ -49,6 +49,9 @@ struct ABLDecorator {
     /// Number of ghost cells.
     static constexpr int ngrow = RHSType::ngrow;
 
+    // Forward RHSType workspace
+    using Workspace = typename RHSType::Workspace;
+
     /**
      * @brief Configuration and parameter container for ABL damping strength function.
      */
@@ -76,11 +79,8 @@ struct ABLDecorator {
     /**
      * @brief Initializes the absorbing boundary layer decorator.
      * @param rhs Underlying right-hand side model.
-     * @param profile Profile function.
      * @param geom Grid geometry.
-     * @param thickness Layer thickness in cells.
-     * @param max_strength Maximum damping strength.
-     * @param target_values Target field values for damping.
+     * @param data_ The ABLData containing profile and parameters.
      */
     ABLDecorator(RHSType rhs, const amrex::Geometry& geom, ABLData data_)
         : rhs(std::move(rhs)), data(std::move(data_)), bulk([&]() {
@@ -96,21 +96,20 @@ struct ABLDecorator {
      * @param time Current simulation time.
      * @param arr Data array view buffer.
      * @param geom Geometry of the data from `arr`.
+     * @param workspace Per-grid-point scratch storage shared across component evaluations.
      * @return Adjusted right-hand side value.
      */
     template <int comp>
-    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real operator()(const amrex::IntVect idx, amrex::Real time,
-                                                                    const amrex::Array4<const amrex::Real>& arr,
-                                                                    const amrex::GeometryData& geom) const {
-        return rhs.template operator()<comp>(idx, time, arr, geom) -
+    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real
+    operator()(const amrex::IntVect idx, amrex::Real time, const amrex::Array4<const amrex::Real>& arr,
+               const amrex::GeometryData& geom, Workspace& workspace) const {
+        return rhs.template operator()<comp>(idx, time, arr, geom, workspace) -
                sigma(idx) * (arr(idx, comp) - data.target_values[comp]);
     }
 
     /**
      * @brief Computes the damping coefficient at a grid cell.
-     * @param i Grid cell index in \f$x\f$-direction.
-     * @param j Grid cell index in \f$y\f$-direction.
-     * @param k Grid cell index in \f$z\f$-direction.
+     * @param idx Index vector of the stencil center cell.
      * @return Damping coefficient value \f$\sigma(x,y,z)\f$.
      */
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real sigma(const amrex::IntVect& idx) const {

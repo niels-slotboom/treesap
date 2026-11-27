@@ -17,10 +17,12 @@ template <int ngrow_> struct WaveEqnRHS {
     static constexpr int ncomp = 4;
     static constexpr int ngrow = ngrow_;
 
+    struct Workspace {}; // empty workspace; no temporaries
+
     template <int comp>
-    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real operator()(const amrex::IntVect idx, amrex::Real t,
-                                                                    const amrex::Array4<const amrex::Real>& arr,
-                                                                    const amrex::GeometryData& geom) const {
+    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real
+    operator()(const amrex::IntVect idx, amrex::Real t, const amrex::Array4<const amrex::Real>& arr,
+               const amrex::GeometryData& geom, Workspace& workspace) const {
         // import namespaces for more concise code
         using namespace treesap;
         using namespace tensor;

@@ -46,15 +46,19 @@ template <int ngrow_> struct WaveEqnRHS {
 
 static_assert(treesap::RHSConcept<WaveEqnRHS<1>>);
 ```
-The template parameter `ngrow_` will define the stencil width, declaring how many neighbouring cells are used in any direction away from a given cell. The `static_assert` line checks if `treesap::RHSConcept` is satisfied in the `ngrow_ = 1` case, and aids us in verifying whether we have given a valid implementation of an `RHSFunctor` which can be used by the `TreESaP` time integrators. This concept checks:
+TThe template parameter ngrow_ specifies the number of ghost cells required by the spatial stencils, in each coordinate direction. The `static_assert` line checks if `treesap::RHSConcept` is satisfied in the `ngrow_ = 1` case, and aids us in verifying whether we have given a valid implementation of an `RHSFunctor` which can be used by the `TreESaP` time integrators. This concept checks:
 - whether there are `static` `constexpr` members `ngrow` and `ncomp`, providing information about stencil width and the amount of components the right-hand side has (in our case 4);
 
--  whether `WaveEqnRHS` defines a valid `operator()` implementation, which is marked `const`, has signature `(const amrex::IntVect idx, amrex::Real time, const amrex::Array4<const amrex::Real>& arr, const amrex::GeometryData& geom) -> amrex::Real`, and is templated upon an integer parameter `comp`. 
+- whether a default-constructible `::Workspace` type is provided. This type holds per-grid-point scratch storage that can be shared across component evaluations at the same grid point. The integrator instantiates the workspace and passes it by reference to each RHS component evaluation. We will not need any scratch storage in this example, so we provide an empty struct.
 
-The first requirement is straightforward to satisfy: we simply add the lines
+-  whether `WaveEqnRHS` defines a valid `operator()` implementation, which is marked `const`, has signature `(const amrex::IntVect idx, amrex::Real time, const amrex::Array4<const amrex::Real>& arr, const amrex::GeometryData& geom, Workspace& workspace) -> amrex::Real`, and is templated upon an integer parameter `comp`. 
+
+The first two requirements are straightforward to satisfy: we simply add the lines
 ```cpp
 static constexpr int ncomp = 4; // since we have one scalar and one 3-vector
 static constexpr int ngrow = ngrow_; // forward the stencil width the user has selected
+
+struct Workspace {}; // empty workspace; no temporaries
 ```
 to the struct body.
 
@@ -63,7 +67,8 @@ The second requirement is more involved, since we need to provide a discretisati
 template <int comp>
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real operator()(const amrex::IntVect idx, amrex::Real t,
                                                                 const amrex::Array4<const amrex::Real>& arr,
-                                                                const amrex::GeometryData& geom) const {
+                                                                const amrex::GeometryData& geom,
+                                                                Workspace& workspace) const {
     // to be implemented...
 }
 ``` 
@@ -73,6 +78,7 @@ There is already a lot going on here, so let us briefly unpack everything. The `
 + `arr` is a reference to the chunk of data of which the cell at `idx` is part of and which holds the data we need for our computations; 
 + `comp` is a compile-time parameter which determines which of the four equations we are currently dealing with, i.e. `comp = 0` means that we should compute the RHS of \f$\partial_t \phi = ...\f$, whereas `comp = 1,2,3` refer to the respective right-hand sides of \f$\partial_t u_a = ...\f$.
 + `geom` provides the relevant grid information, such as its spacing \f$(\Delta x, \Delta y, \Delta z)\f$. We will assume \f$\Delta x = \Delta y = \Delta z\f$.
++ `workspace` provides access to the per-grid-point scratch storage shared across component evaluations. Since this example requires no intermediate quantities to persist between evaluations, we do not use it.
 + The `return` value of the `operator()` call should be the value of the respective RHS, as approximated by a finite-difference discretisation.
 
 It is marked `const` since it should not change the simulation parameters; evaluating the RHS of the PDE should not cause simulation parameters to change&mdash;in this example, we have none, but other PDEs might have things like coupling constants.
@@ -109,7 +115,8 @@ This leaves us with the following `operator()`:
 template <int comp>
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real operator()(const amrex::IntVect idx, amrex::Real t,
                                                                 const amrex::Array4<const amrex::Real>& arr,
-                                                                const amrex::GeometryData& geom) const {
+                                                                const amrex::GeometryData& geom,
+                                                                Workspace& workspace) const {
     // import namespaces for more concise code
     using namespace treesap;
     using namespace tensor;
@@ -163,7 +170,8 @@ Putting all of the above together, we arrive at the `operator()` implementation
 template <int comp>
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real operator()(const amrex::IntVect idx, amrex::Real t,
                                                                 const amrex::Array4<const amrex::Real>& arr,
-                                                                const amrex::GeometryData& geom) const {
+                                                                const amrex::GeometryData& geom,
+                                                                Workspace& workspace) const {
     // import namespaces for more concise code
     using namespace treesap;
     using namespace tensor;

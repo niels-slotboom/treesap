@@ -26,13 +26,19 @@ template <int ngrow_> struct NonLinearRHS {
 
     AMREX_GPU_HOST_DEVICE explicit NonLinearRHS(amrex::Real gamma) : gamma(gamma) {}
 
-    // per-thread scratch state for temporaries used across operator() invocations for different values of `comp`.
-    mutable PiAliasType::Temporary pi_temp;
+    /**
+     * @brief Per-grid-point scratch state for temporaries shared across component evaluations.
+     *
+     * Instances are managed by the integrator and passed to operator() by reference.
+     */
+    struct Workspace {
+        PiAliasType::Temporary pi;
+    };
 
     template <int comp>
-    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real operator()(const amrex::IntVect idx, amrex::Real t,
-                                                                    const amrex::Array4<const amrex::Real>& arr,
-                                                                    const amrex::GeometryData& geom) const {
+    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real
+    operator()(const amrex::IntVect idx, amrex::Real t, const amrex::Array4<const amrex::Real>& arr,
+               const amrex::GeometryData& geom, Workspace& workspace) const {
         // import namespaces for more concise code
         using namespace treesap;
         using namespace tensor;
@@ -42,23 +48,22 @@ template <int ngrow_> struct NonLinearRHS {
         PhiAliasType phi{{arr}}; // component range {0}
         PiAliasType pi{{arr}};   // component range {1}
 
-        // prepare scratch state temporaries if comp == 0, i.e. the first operator() evaluation
+        // Initialise the workspace temporary during the first component evaluation.
         if constexpr (comp == 0) {
-            pi_temp = pi.load(idx); // load pi value from memory
-                                    // just once, so it can be reused for
-                                    // the comp = 0 and comp = 1 evaluation.
+            workspace.pi = pi.load(idx); // load pi from the underlying grid data once,
+                                         // for reuse in subsequent component evaluations.
         }
 
         // constexpr if to decide which field comp belongs to
         if constexpr (phi.contains(comp)) {       // phi_rhs implementation
-            return pi_temp({});                   // = pi(i,j,k) as stored in temporary
+            return workspace.pi({});              // = pi(idx) as stored in temporary
         } else if constexpr (pi.contains(comp)) { // pi_rhs implementation
             VectorAlias<>::Temporary phi_grad{};  // temporary to hold grad(phi)
             static_for<3>([&]<int a>() { phi_grad({a}) = derivative<ngrow, a>(phi, {}, idx, geom); });
             amrex::Real grad_sq = contract([&]<int a>() { return phi_grad({a}) * phi_grad({a}); });
             amrex::Real laplacian = contract([&]<int a>() { return derivative<ngrow, a, a>(phi, {}, idx, geom); });
 
-            return (laplacian - gamma * pi_temp({}) * grad_sq);
+            return (laplacian - gamma * workspace.pi({}) * grad_sq);
         } else {
             return NAN; // this should never be reached
         }

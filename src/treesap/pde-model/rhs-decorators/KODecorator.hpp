@@ -40,7 +40,10 @@ struct KODecorator {
 
     /// Order of the Kreiss-Oliger operator
     static constexpr int order = order_;
-    static_assert(order <= ngrow);
+    static_assert(order > 0 && order <= ngrow);
+
+    // Forward RHSType workspace
+    using Workspace = typename RHSType::Workspace;
 
     /**
      * @brief Evaluate the decorated right-hand side with added dissipation.
@@ -49,24 +52,25 @@ struct KODecorator {
      * @param time Current simulation time.
      * @param arr Data array view buffer.
      * @param geom Geometry of the data from `arr`.
+     * @param workspace Per-grid-point scratch storage shared across component evaluations.
      * @return Combined right-hand side value with dissipation.
      */
     template <int comp>
-    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real operator()(const amrex::IntVect idx, amrex::Real time,
-                                                                    const amrex::Array4<const amrex::Real>& arr,
-                                                                    const amrex::GeometryData& geom) const {
+    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real
+    operator()(const amrex::IntVect idx, amrex::Real time, const amrex::Array4<const amrex::Real>& arr,
+               const amrex::GeometryData& geom, Workspace& workspace) const {
         using namespace stencil;
 
         amrex::Real ko_term = 0.0;
-        ko_term += kreiss_oliger<order, dir::x>(idx, comp, arr);
-        ko_term += kreiss_oliger<order, dir::y>(idx, comp, arr);
-        ko_term += kreiss_oliger<order, dir::z>(idx, comp, arr);
+        ko_term += kreiss_oliger<order, dir::x>(idx, comp, arr, geom);
+        ko_term += kreiss_oliger<order, dir::y>(idx, comp, arr, geom);
+        ko_term += kreiss_oliger<order, dir::z>(idx, comp, arr, geom);
 
-        return rhs.template operator()<comp>(idx, time, arr, geom) + strength * ko_term;
+        return rhs.template operator()<comp>(idx, time, arr, geom, workspace) + strength * ko_term;
     }
 
     RHSType rhs;          ///< Undecorated right-hand side functor.
-    amrex::Real strength; ///< Dissipation strength factor \f$\kappa\f$.
+    amrex::Real strength; ///< Dimensionless dissipation strength factor \f$\kappa\f$.
 };
 
 // Verify that KODecorator satisfies the right-hand side concept.
