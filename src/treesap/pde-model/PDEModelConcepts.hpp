@@ -22,27 +22,23 @@ namespace treesap {
  * @tparam F Type to check against the concept.
  */
 template <typename F>
-concept RHSConcept = std::is_trivially_copyable_v<F> &&
-                     requires {
-                         typename std::integral_constant<int, F::ncomp>;
-                         typename std::integral_constant<int, F::ngrow>;
-                         requires F::ncomp > 0;
-                         requires F::ngrow >= 0;
-                     } &&
-                     requires(const F& f,
-                              int i,                                       ///< Grid cell index in X direction
-                              int j,                                       ///< Grid cell index in Y direction
-                              int k,                                       ///< Grid cell index in Z direction
-                              amrex::Real time,                            ///< Current simulation time
-                              const amrex::Array4<const amrex::Real>& arr, ///< View into source FAB data buffer
-                              const amrex::GeometryData& geom              ///< GPU-safe domain geometry data
-                     ) {
-                         // Use a compile-time constant (e.g., 0) as the template argument,
-                         // assuming components are indexed from 0 up to F::ncomp - 1.
-                         {
-                             f.template operator()<0>(i, j, k, time, arr, geom)
-                         } -> std::convertible_to<amrex::Real>; // if this fails, check if operator() is marked const
-                     };
+concept RHSConcept = std::is_trivially_copyable_v<F> && requires {
+    typename std::integral_constant<int, F::ncomp>;
+    typename std::integral_constant<int, F::ngrow>;
+    requires F::ncomp > 0;
+    requires F::ngrow >= 0;
+} && []<std::size_t... Is>(std::index_sequence<Is...>) {
+    // Check that every component-specific RHS instantiation is valid.
+    return (requires(const F & f,
+                     const amrex::IntVect idx,                     ///< Grid index to evaluate RHS at
+                     amrex::Real time,                             ///< Current simulation time
+                     const amrex::Array4<const amrex::Real> & arr, ///< View into source FAB data buffer
+                     const amrex::GeometryData & geom              ///< GPU-safe domain geometry data
+            ) {
+        { f.template operator()<static_cast<int>(Is)>(idx, time, arr, geom) } -> std::convertible_to<amrex::Real>;
+    } && ...);
+}(std::make_index_sequence<F::ncomp>{});
+
 /**
  * @brief Verifies that a type implements boundary condition filling logic.
  * @tparam F Type to check against the concept.

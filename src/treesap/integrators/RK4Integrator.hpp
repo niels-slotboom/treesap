@@ -14,7 +14,7 @@ namespace treesap {
 
 /**
  * @brief Concrete `Integrator` implementation for the classical fourth-order Runge-Kutta (RK4) scheme.
- * @tparam PDEModelType Type of the PDE model to be forwarded to the base class template`Integrator`.
+ * @tparam PDEModelType Type of the PDE model to be forwarded to the base class template `Integrator`.
  *
  * For a PDE of the form
  * \f[
@@ -135,20 +135,21 @@ class RK4Integrator : public Integrator<PDEModelType> {
             amrex::Array4<const amrex::Real> arg_arr = arg.const_array(mfi);
             amrex::Array4<amrex::Real> arg_next_arr = arg_next.array(mfi);
             amrex::ParallelFor(box, [=] AMREX_GPU_DEVICE(int i, int j, int k) {
+                const amrex::IntVect idx{i, j, k};
                 static_for<ncomp>([=] AMREX_GPU_DEVICE<int comp>() {
                     // compute stage k_i for current voxel and accumulate
                     amrex::Real stage;
                     if constexpr (is_first) {
-                        stage = rhs_.template operator()<comp>(i, j, k, time_arg, init_arr, geom);
-                        acc_arr(i, j, k, comp) = init_arr(i, j, k, comp) + b * stage;
+                        stage = rhs_.template operator()<comp>(idx, time_arg, init_arr, geom);
+                        acc_arr(idx, comp) = init_arr(idx, comp) + b * stage;
                     } else {
-                        stage = rhs_.template operator()<comp>(i, j, k, time_arg, arg_arr, geom);
-                        acc_arr(i, j, k, comp) += b * stage;
+                        stage = rhs_.template operator()<comp>(idx, time_arg, arg_arr, geom);
+                        acc_arr(idx, comp) += b * stage;
                     }
 
                     // prepare arg_next if there is a next stage
                     if constexpr (!is_last) {
-                        arg_next_arr(i, j, k, comp) = init_arr(i, j, k, comp) + a_next * stage;
+                        arg_next_arr(idx, comp) = init_arr(idx, comp) + a_next * stage;
                     }
                 });
             });

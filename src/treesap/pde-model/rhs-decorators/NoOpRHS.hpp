@@ -23,7 +23,7 @@ template <int ncomp_, int ngrow_> struct NoOpRHS {
 
     /// Does nothing; returns zero.
     template <int comp>
-    AMREX_GPU_HOST_DEVICE amrex::Real operator()(int i, int j, int k, amrex::Real time,
+    AMREX_GPU_HOST_DEVICE amrex::Real operator()(const amrex::IntVect idx, amrex::Real time,
                                                  const amrex::Array4<const amrex::Real>& arr,
                                                  const amrex::GeometryData& geom) const {
         return 0.0;

@@ -46,7 +46,7 @@ int main(int argc, char** argv) {
         // --- instantiate PDE model ---
         amrex::Real dx = geom.CellSize(0);
         amrex::Real dt = std::sqrt(8.0) * dx; // we will use RK4, which at ngrow = 1 has this as a CFL bound
-        RHSType rhs(geom.data());             // RHS of the bulk PDE, without ABL terms
+        RHSType rhs;                          // RHS of the bulk PDE, without ABL terms
         InitType init({"exp(-(x^2 + y^2 + z^2)/0.1^2)", "0.0", "0.0", "0.0"}); // functions used to initialise fields
         BCType bc{0.0, 0.0, 0.0, 0.0};                                         // boundary values set to 0
         ModelType model({"phi", "u_0", "u_1", "u_2"}, std::move(geom), dt, std::move(rhs), std::move(init),

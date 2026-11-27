@@ -49,7 +49,7 @@ static_assert(treesap::RHSConcept<WaveEqnRHS<1>>);
 The template parameter `ngrow_` will define the stencil width, declaring how many neighbouring cells are used in any direction away from a given cell. The `static_assert` line checks if `treesap::RHSConcept` is satisfied in the `ngrow_ = 1` case, and aids us in verifying whether we have given a valid implementation of an `RHSFunctor` which can be used by the `TreESaP` time integrators. This concept checks:
 - whether there are `static` `constexpr` members `ngrow` and `ncomp`, providing information about stencil width and the amount of components the right-hand side has (in our case 4);
 
--  whether `WaveEqnRHS` defines a valid `operator()` implementation, which is marked `const`, has signature `(int i, int j, int k, amrex::Real time, const amrex::Array4<const amrex::Real>& arr, const amrex::GeometryData& geom) -> amrex::Real`, and is templated upon an integer parameter `comp`. 
+-  whether `WaveEqnRHS` defines a valid `operator()` implementation, which is marked `const`, has signature `(const amrex::IntVect idx, amrex::Real time, const amrex::Array4<const amrex::Real>& arr, const amrex::GeometryData& geom) -> amrex::Real`, and is templated upon an integer parameter `comp`. 
 
 The first requirement is straightforward to satisfy: we simply add the lines
 ```cpp
@@ -61,16 +61,16 @@ to the struct body.
 The second requirement is more involved, since we need to provide a discretisation of the right-hand sides of the first-order PDE formulation we have written above. To do this, we add the basic signature of the required `operator()` implementation:
 ```cpp
 template <int comp>
-AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real operator()(int i, int j, int k, amrex::Real t,
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real operator()(const amrex::IntVect idx, amrex::Real t,
                                                                 const amrex::Array4<const amrex::Real>& arr,
                                                                 const amrex::GeometryData& geom) const {
     // to be implemented...
 }
 ``` 
 There is already a lot going on here, so let us briefly unpack everything. The `operator()`'s signature expects:
-+ three grid indices `i,j,k`, which refer to the cell for which the current RHS evaluation is carried out;
++ A grid index vector `idx`, which refers to the cell for which the current RHS evaluation is carried out;
 + the `t` parameter allows us to implement a possible time-dependence of a PDE's right-hand side; we will not use it, but it is part of the required signature regardless;
-+ `arr` is a reference to the chunk of data of which the cell at `(i,j,k)` is part of and which holds the data we need for our computations; 
++ `arr` is a reference to the chunk of data of which the cell at `idx` is part of and which holds the data we need for our computations; 
 + `comp` is a compile-time parameter which determines which of the four equations we are currently dealing with, i.e. `comp = 0` means that we should compute the RHS of \f$\partial_t \phi = ...\f$, whereas `comp = 1,2,3` refer to the respective right-hand sides of \f$\partial_t u_a = ...\f$.
 + `geom` provides the relevant grid information, such as its spacing \f$(\Delta x, \Delta y, \Delta z)\f$. We will assume \f$\Delta x = \Delta y = \Delta z\f$.
 + The `return` value of the `operator()` call should be the value of the respective RHS, as approximated by a finite-difference discretisation.
@@ -107,7 +107,7 @@ static_assert(u.next == ncomp);
 This leaves us with the following `operator()`:
 ```cpp
 template <int comp>
-AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real operator()(int i, int j, int k, amrex::Real t,
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real operator()(const amrex::IntVect idx, amrex::Real t,
                                                                 const amrex::Array4<const amrex::Real>& arr,
                                                                 const amrex::GeometryData& geom) const {
     // import namespaces for more concise code
@@ -139,15 +139,15 @@ The `phi_rhs` branch should return a discretisation of \f$\partial_t \phi = \par
 ```cpp
 using namespace stencil;
 
-contract([&]<int a>() { return derivative<ngrow, a>(i, j, k, u, {a}, geom); });
+contract([&]<int a>() { return derivative<ngrow, a>(u, {a}, idx, geom); });
 ```
 The outer call to `treesap::tensor::contract()` expects a lambda expression returning an `amrex::Real`, which it evaluates for `a = 0,1,2` and sums up. Inside the lambda, we must compute the (unsummed) discretisation \f$\partial_a u_a\f$, which we do by calling `treesap::stencil::derivative<>()`. Its arguments are as follows:
 
 + `ngrow` sets the stencil width to whatever the user has configured;
 + the single additional template argument `int a` specifies that we are taking a first-order derivative along the direction `a`, that is, we are computing a discretised \f$\partial_a\f$;
-+ `i,j,k` are the indices of the cell at which the stencil is centered;
 + passing `u` specifies that we are taking a derivative of the vector field `u`;
 + `{a}` is the index (array) which specifies the component of which we are taking a derivative.
++ `idx` is the grid index vector of the cell at which the stencil is centered;
 + `geom` allows the `derivative` implementation to apply grid scaling factors.
 
 Turning our attention to the RHS for \f$\mathbf{u}\f$, that is, \f$\partial_t u_a = \partial_a \phi\f$, we can simply use `stencil::derivative<>()`, but this time, we have to restore the vector index `a` from `comp`. The tensor aliasing system provides functions for this: calling `u.restore_absolute(comp)` gives us the index (array) which tells us the component of `u` which `comp` is referring to. We hence implement this branch as
@@ -156,12 +156,12 @@ Turning our attention to the RHS for \f$\mathbf{u}\f$, that is, \f$\partial_t u_
 constexpr auto restored = u.restore_absolute(comp);
 constexpr int a = restored[0];
 
-return derivative<ngrow, a>(i, j, k, phi, {/*no indices*/}, geom); // = ∂ₐφ(i,j,k)
+return derivative<ngrow, a>( phi, {/*no indices*/}, idx, geom); // = ∂ₐφ(idx)
 ```
 Putting all of the above together, we arrive at the `operator()` implementation
 ```cpp
 template <int comp>
-AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real operator()(int i, int j, int k, amrex::Real t,
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real operator()(const amrex::IntVect idx, amrex::Real t,
                                                                 const amrex::Array4<const amrex::Real>& arr,
                                                                 const amrex::GeometryData& geom) const {
     // import namespaces for more concise code
@@ -175,15 +175,15 @@ AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real operator()(int i, int j, in
     static_assert(u.next == ncomp); // ensure that we have the correct amount of components
 
     // constexpr if to decide which field comp belongs to
-    if constexpr (phi.contains(comp)) { // phi_rhs implementation
-        return contract([&]<int a>() { return derivative<ngrow, a>(i, j, k, u, {a}, geom); }); // = ∂ₐuᵃ(i,j,k)
+    if constexpr (phi.contains(comp)) {                                                    // phi_rhs implementation
+        return contract([&]<int a>() { return derivative<ngrow, a>(u, {a}, idx, geom); }); // = ∂ₐuₐ(idx)
 
     } else if constexpr (u.contains(comp)) { // u_rhs implementation
         // restore vector index into constexpr int a so we can use it as a template argument
         constexpr auto restored = u.restore_absolute(comp);
         constexpr int a = restored[0];
 
-        return derivative<ngrow, a>(i, j, k, phi, {/*no indices*/}, geom); // = ∂ₐφ(i,j,k)
+        return derivative<ngrow, a>(phi, {/*no indices*/}, idx, geom); // = ∂ₐφ(idx)
     } else {
         return NAN; // this should never be reached
     }

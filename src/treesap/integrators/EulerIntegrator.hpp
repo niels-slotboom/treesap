@@ -70,9 +70,10 @@ class EulerIntegrator : public Integrator<PDEModelType> {
             amrex::Array4<amrex::Real> arr_new = state_new.array(mfi);
 
             amrex::ParallelFor(box, [=] AMREX_GPU_DEVICE(int i, int j, int k) {
+                const amrex::IntVect idx{i, j, k};
                 static_for<ncomp>([=] AMREX_GPU_DEVICE<int comp>() {
-                    arr_new(i, j, k, comp) = arr_old(i, j, k, comp) +
-                                             delta_time * rhs.template operator()<comp>(i, j, k, time_, arr_old, geom);
+                    arr_new(idx, comp) =
+                        arr_old(idx, comp) + delta_time * rhs.template operator()<comp>(idx, time_, arr_old, geom);
                 });
             });
         }

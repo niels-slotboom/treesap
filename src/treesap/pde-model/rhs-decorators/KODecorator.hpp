@@ -44,27 +44,25 @@ struct KODecorator {
 
     /**
      * @brief Evaluate the decorated right-hand side with added dissipation.
-     * @param i Grid cell index in \f$x\f$-direction.
-     * @param j Grid cell index in \f$y\f$-direction.
-     * @param k Grid cell index in \f$z\f$-direction.
-     * @param comp Component index in the MultiFab component range.
+     * @tparam comp Component index in the MultiFab component range.
+     * @param idx Index vector of the stencil center cell.
      * @param time Current simulation time.
      * @param arr Data array view buffer.
      * @param geom Geometry of the data from `arr`.
      * @return Combined right-hand side value with dissipation.
      */
     template <int comp>
-    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real operator()(int i, int j, int k, amrex::Real time,
+    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real operator()(const amrex::IntVect idx, amrex::Real time,
                                                                     const amrex::Array4<const amrex::Real>& arr,
                                                                     const amrex::GeometryData& geom) const {
         using namespace stencil;
 
         amrex::Real ko_term = 0.0;
-        ko_term += kreiss_oliger<order, dir::x>(i, j, k, comp, arr) / geom.CellSize(dir::x);
-        ko_term += kreiss_oliger<order, dir::y>(i, j, k, comp, arr) / geom.CellSize(dir::y);
-        ko_term += kreiss_oliger<order, dir::z>(i, j, k, comp, arr) / geom.CellSize(dir::z);
+        ko_term += kreiss_oliger<order, dir::x>(idx, comp, arr);
+        ko_term += kreiss_oliger<order, dir::y>(idx, comp, arr);
+        ko_term += kreiss_oliger<order, dir::z>(idx, comp, arr);
 
-        return rhs.template operator()<comp>(i, j, k, time, arr, geom) + strength * ko_term;
+        return rhs.template operator()<comp>(idx, time, arr, geom) + strength * ko_term;
     }
 
     RHSType rhs;          ///< Undecorated right-hand side functor.

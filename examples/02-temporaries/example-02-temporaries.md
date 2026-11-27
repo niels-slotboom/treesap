@@ -41,8 +41,8 @@ Two quantities in this formulation are particularly interesting from the perspec
 
 ```cpp
 amrex::Real grad = contract([&]<int a>(){
-    return derivative<ngrow,a>(i,j,k,phi,{},geom) * 
-           derivative<ngrow,a>(i,j,k,phi,{},geom);
+    return derivative<ngrow,a>(phi, {}, idx, geom) * 
+           derivative<ngrow,a>(phi, {}, idx, geom);
 });
 ```
 
@@ -79,7 +79,7 @@ In further analogy to @subpage example-01-wave-equation, we add the standard ten
 
 ```cpp
 template <int comp>
-AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real operator()(int i, int j, int k, amrex::Real t,
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real operator()(const amrex::IntVect idx, amrex::Real t,
                                                                 const amrex::Array4<const amrex::Real>& arr,
                                                                 const amrex::GeometryData& geom) const {
     // import namespaces for more concise code
@@ -120,19 +120,19 @@ Our `operator()` implementation must initialise it during the first invocation, 
 ```cpp
 // prepare scratch state temporaries if comp == 0, i.e. the first operator() evaluation
 if constexpr (comp == 0) {
-    pi_temp = pi.load(i, j, k); // load pi value from memory
+    pi_temp = pi.load(idx); // load pi value from memory
                                 // just once, so it can be reused for
                                 // the comp = 0 and comp = 1 evaluation.
 }
 ```
 
-For a tensor alias, the `.load(i,j,k)` method loads the entire tensor at the given grid point \f$(i,j,k)\f$ into its associated temporary. In principle, for a scalar quantity, one could simply use an `amrex::Real` as a temporary variable. For higher-rank tensors, however, this quickly becomes cumbersome, and it is preferable to use `TensorAliasBase::Temporary` uniformly for all tensorial quantities.
+For a tensor alias, the `.load(idx)` method loads the entire tensor at the given grid point \f$(idx)\f$ into its associated temporary. In principle, for a scalar quantity, one could simply use an `amrex::Real` as a temporary variable. For higher-rank tensors, however, this quickly becomes cumbersome, and it is preferable to use `TensorAliasBase::Temporary` uniformly for all tensorial quantities.
 
 Having loaded the local value of \f$\pi\f$ into `pi_temp`, we can now use it to evaluate the RHS of \f$\partial_t \phi\f$ by amending its `if constexpr` branch as follows:
 
 ```cpp
 if constexpr (phi.contains(comp)) { // phi_rhs implementation
-    return pi_temp({});             // = pi(i,j,k) as stored in temporary
+    return pi_temp({});             // = pi(idx) as stored in temporary
 } 
 ```
 
@@ -151,21 +151,21 @@ More concretely, this is carried out by adding the following to the `pi_rhs` bra
 ```cpp
 VectorAlias<>::Temporary phi_grad{};  // temporary to hold grad(phi)
 static_for<3>([&]<int a>() {
-     phi_grad({a}) = derivative<ngrow, a>(i, j, k, phi, {}, geom);
+     phi_grad({a}) = derivative<ngrow, a>(phi, {}, idx, geom);
 });
 amrex::Real grad_sq = contract([&]<int a>() { 
     return phi_grad({a}) * phi_grad({a}); 
 });
 ```
 
-In the first line, we instantiate the vector temporary. The subsequent call to `static_for` populates each of its components with the corresponding derivative stencil value. The reason for using `static_for` rather than an ordinary `for` loop is that the directions `a` must be known at compile time in order to be used as template parameters. The call to `static_for<3>` therefore instantiates the supplied lambda for \f$a = 0, 1, 2\f$, effectively unrolling the loop at compile time.
+In the first line, we instantiate the vector temporary. The subsequent call to `static_for` populates each of its components with the corresponding derivative stencil value. The reason for using `static_for` rather than an ordinary `for` loop is that the directions `a` must be known at compile time in order to be used as template parameters. The call to `static_for<3>` therefore instantiates and calls the supplied lambda for \f$a = 0, 1, 2\f$, effectively unrolling the loop at compile time.
 
 Notice that, unlike `pi_temp`, the gradient temporary is declared locally within `operator()`. This is sufficient because its contents are only needed during the current invocation: there is no need to preserve them across RHS component evaluations. Both temporaries use the same underlying `Temporary` mechanism, but their different lifetimes reflect their different purposes.
 
 Once we have computed the squared norm of the gradient, all that remains is to construct the Laplacian of \f$\phi\f$ by contracting its second derivatives and to assemble the final result:
 
 ```cpp
-amrex::Real laplacian = contract([&]<int a>() { return derivative<ngrow, a, a>(i, j, k, phi, {}, geom); });
+amrex::Real laplacian = contract([&]<int a>() { return derivative<ngrow, a, a>(phi, {}, idx, geom); });
 
 return (laplacian - gamma * pi_temp({}) * grad_sq);
 ```

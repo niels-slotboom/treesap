@@ -26,12 +26,11 @@ template <int ngrow_> struct NonLinearRHS {
 
     AMREX_GPU_HOST_DEVICE explicit NonLinearRHS(amrex::Real gamma) : gamma(gamma) {}
 
-    // per-thread scratch state for temporaries and grid spacing used across operator() invocations for different values
-    // of `comp`.
+    // per-thread scratch state for temporaries used across operator() invocations for different values of `comp`.
     mutable PiAliasType::Temporary pi_temp;
 
     template <int comp>
-    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real operator()(int i, int j, int k, amrex::Real t,
+    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real operator()(const amrex::IntVect idx, amrex::Real t,
                                                                     const amrex::Array4<const amrex::Real>& arr,
                                                                     const amrex::GeometryData& geom) const {
         // import namespaces for more concise code
@@ -45,9 +44,9 @@ template <int ngrow_> struct NonLinearRHS {
 
         // prepare scratch state temporaries if comp == 0, i.e. the first operator() evaluation
         if constexpr (comp == 0) {
-            pi_temp = pi.load(i, j, k); // load pi value from memory
-                                        // just once, so it can be reused for
-                                        // the comp = 0 and comp = 1 evaluation.
+            pi_temp = pi.load(idx); // load pi value from memory
+                                    // just once, so it can be reused for
+                                    // the comp = 0 and comp = 1 evaluation.
         }
 
         // constexpr if to decide which field comp belongs to
@@ -55,9 +54,9 @@ template <int ngrow_> struct NonLinearRHS {
             return pi_temp({});                   // = pi(i,j,k) as stored in temporary
         } else if constexpr (pi.contains(comp)) { // pi_rhs implementation
             VectorAlias<>::Temporary phi_grad{};  // temporary to hold grad(phi)
-            static_for<3>([&]<int a>() { phi_grad({a}) = derivative<ngrow, a>(i, j, k, phi, {}, geom); });
+            static_for<3>([&]<int a>() { phi_grad({a}) = derivative<ngrow, a>(phi, {}, idx, geom); });
             amrex::Real grad_sq = contract([&]<int a>() { return phi_grad({a}) * phi_grad({a}); });
-            amrex::Real laplacian = contract([&]<int a>() { return derivative<ngrow, a, a>(i, j, k, phi, {}, geom); });
+            amrex::Real laplacian = contract([&]<int a>() { return derivative<ngrow, a, a>(phi, {}, idx, geom); });
 
             return (laplacian - gamma * pi_temp({}) * grad_sq);
         } else {

@@ -91,21 +91,19 @@ struct ABLDecorator {
 
     /**
      * @brief Evaluates the decorated right-hand side with added boundary damping.
-     * @param i Grid cell index in \f$x\f$-direction.
-     * @param j Grid cell index in \f$y\f$-direction.
-     * @param k Grid cell index in \f$z\f$-direction.
-     * @param comp Component index in the MultiFab component range.
+     * @tparam comp Component index in the MultiFab component range.
+     * @param idx Index vector of the stencil center cell.
      * @param time Current simulation time.
      * @param arr Data array view buffer.
      * @param geom Geometry of the data from `arr`.
      * @return Adjusted right-hand side value.
      */
     template <int comp>
-    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real operator()(int i, int j, int k, amrex::Real time,
+    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real operator()(const amrex::IntVect idx, amrex::Real time,
                                                                     const amrex::Array4<const amrex::Real>& arr,
                                                                     const amrex::GeometryData& geom) const {
-        return rhs.template operator()<comp>(i, j, k, time, arr, geom) -
-               sigma(i, j, k) * (arr(i, j, k, comp) - data.target_values[comp]);
+        return rhs.template operator()<comp>(idx, time, arr, geom) -
+               sigma(idx) * (arr(idx, comp) - data.target_values[comp]);
     }
 
     /**
@@ -115,10 +113,8 @@ struct ABLDecorator {
      * @param k Grid cell index in \f$z\f$-direction.
      * @return Damping coefficient value \f$\sigma(x,y,z)\f$.
      */
-    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real sigma(int i, int j, int k) const {
+    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE amrex::Real sigma(const amrex::IntVect& idx) const {
         using namespace stencil;
-
-        amrex::IntVect idx{i, j, k};
 
         if (bulk.contains(idx)) // return 0 if we are inside the bulk
             return 0.0;

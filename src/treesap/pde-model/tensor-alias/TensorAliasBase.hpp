@@ -243,6 +243,17 @@ struct TensorAliasBase {
     }
 
     /**
+     * @brief Accesses a specific array element using spatial and tensor indices.
+     * @param idx Index vector of the stencil center cell.
+     * @param tensor_indices The tensor index values ({} for rank 0 scalars).
+     * @return Reference to the array element.
+     */
+    AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE ArrayType& operator()(const amrex::IntVect& idx,
+                                                                   const IndexArray<rank>& tensor_indices) const {
+        return arr(idx, get_absolute(tensor_indices));
+    }
+
+    /**
      * @brief Returns a `TensorAliasBase::Temporary` object containing a copy of the data in the
      * aliased array at `(i,j,k)`.
      * @param i Grid cell index in \f$x\f$-direction.
@@ -255,6 +266,21 @@ struct TensorAliasBase {
 #pragma unroll
         for (int comp = 0; comp < ncomp; ++comp) {
             result.data[comp] = arr(i, j, k, comp_base + comp);
+        }
+        return result;
+    }
+
+    /**
+     * @brief Returns a `TensorAliasBase::Temporary` object containing a copy of the data in the
+     * aliased array at `(i,j,k)`.
+     * @param idx Index vector of the stencil center cell.
+     * @return `TensorAliasBase::Temporary` object containing a copy of the data in the aliased array at `(i,j,k)`.
+     */
+    AMREX_FORCE_INLINE AMREX_GPU_HOST_DEVICE Temporary load(const amrex::IntVect& idx) const {
+        Temporary result{};
+#pragma unroll
+        for (int comp = 0; comp < ncomp; ++comp) {
+            result.data[comp] = arr(idx, comp_base + comp);
         }
         return result;
     }
