@@ -33,14 +33,14 @@ jobs:
       - name: Generate Documentation
         run: doxygen Doxyfile
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
-
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
+          name: github-pages-${{ github.run_attempt }}
           path: './doc/html/'
 
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+        with:
+          artifact_name: github-pages-${{ github.run_attempt }}
