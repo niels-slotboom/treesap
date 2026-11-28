@@ -3,13 +3,13 @@
 
 /**
  * @file
- * @brief Provides the concrete `treesap::EulerIntegrator` implementation of `treesap::Integrator`.
+ * @brief Provides the concrete `treesap::SingleLevelEulerIntegrator` implementation of `treesap::Integrator`.
  */
 
 #pragma once
 #include "AMReX_Array4.H"
 #include "AMReX_MFIter.H"
-#include "Integrator.hpp"
+#include "SingleLevelIntegrator.hpp"
 
 namespace treesap {
 
@@ -28,8 +28,8 @@ namespace treesap {
  */
 template <typename PDEModelType>
     requires PDEModelConcept<PDEModelType>
-class EulerIntegrator : public Integrator<PDEModelType> {
-    using Base = Integrator<PDEModelType>;
+class SingleLevelEulerIntegrator : public SingleLevelIntegrator<PDEModelType> {
+    using Base = SingleLevelIntegrator<PDEModelType>;
 
     // bring member constants into class scope
     using Base::ncomp;
@@ -44,8 +44,13 @@ class EulerIntegrator : public Integrator<PDEModelType> {
     using typename Base::RHSType;
 
   public:
-    // Inherit constructor
-    using Integrator<PDEModelType>::Integrator;
+    /**
+     * @brief Initialize the Runge-Kutta 4 integrator.
+     * @param model_ PDE model instance.
+     * @param block_size Block size for box array partition.
+     */
+    SingleLevelEulerIntegrator(PDEModelType model_, const amrex::IntVect& block_size)
+        : Base(std::move(model_), block_size) {}
 
   protected:
     /**

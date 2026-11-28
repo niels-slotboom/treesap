@@ -15,7 +15,7 @@
 
 // TreESaP includes
 #include "init/FunctionInit.hpp"
-#include "integrators/RK4Integrator.hpp"
+#include "integrators/SingleLevelRK4Integrator.hpp"
 #include "pde-model/PDEModel.hpp"
 #include "pde-model/bcs/DirichletBC.hpp"
 #include "util/ScopedTimer.hpp"
@@ -53,7 +53,7 @@ int main(int argc, char** argv) {
                         std::move(bc));
 
         // --- set up integrator ---
-        treesap::RK4Integrator<ModelType> integrator(std::move(model), {128, 128, 128});
+        treesap::SingleLevelRK4Integrator<ModelType> integrator(std::move(model), {128, 128, 128});
         integrator.initialise(); // populate initial field values
         integrator.configureExporter("raw/wave_eqn",
                                      2);      // configure exports to happen every 2 steps,

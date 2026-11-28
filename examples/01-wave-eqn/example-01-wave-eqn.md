@@ -4,7 +4,7 @@ Welcome to the first code example, which is meant to illustrate the core feature
 $$
     \partial_t^2 \phi = \Delta \phi,
 $$
-using the compile-time tensor aliasing system, finite-difference stencil templates, and the `treesap::RK4Integrator` class provided by the `TreESaP`. 
+using the compile-time tensor aliasing system, finite-difference stencil templates, and the `treesap::SingleLevelRK4Integrator` class provided by the `TreESaP`. 
 
 The code for this example is found in [`examples/01-wave-eqn/`](https://github.com/niels-slotboom/treesap/tree/main/examples/01-wave-eqn/).
 
@@ -276,13 +276,13 @@ The chosen math expressions for `init` create an initially stationary Gaussian p
 We now have a `model` ready to be passed into a `treesap::Integrator` implementation.
 
 ## Integrating the PDE Model
-To integrate the PDE defined by `model`, we must pass it to a derived `treesap::Integrator` implementation. We use the `TreESaP` library's `treesap::RK4Integrator` implementation, which we make available using the following include:
+To integrate the PDE defined by `model`, we must pass it to a derived `treesap::Integrator` implementation. We use the `TreESaP` library's `treesap::SingleLevelRK4Integrator` implementation, which we make available using the following include:
 ```cpp
-#include "integrators/RK4Integrator.hpp"
+#include "integrators/SingleLevelRK4Integrator.hpp"
 ```
 We instantiate and initialise the integrator with
 ```cpp
-treesap::RK4Integrator<ModelType> integrator(std::move(model), {128, 128, 128});
+treesap::SingleLevelRK4Integrator<ModelType> integrator(std::move(model), {128, 128, 128});
 integrator.initialise();
 ```
 Here, the second argument sets the maximum box size for the internal `amrex::MultiFab` storage; since our domain has the index size \f$256^3\f$, this implies that it is split up into eight \f$128^3\f$-sized boxes. The call to `.initialise()` uses the `treesap::FunctionInit` functor to populate the initial state of the fields. 

@@ -29,12 +29,20 @@
 namespace treesap {
 
 /**
- * @brief Semi-virtual class template managing time integration for a PDE model.
+ * @brief Abstract base class template managing time integration for a PDE model.
  * @tparam PDEModelType Type of the PDE model.
  *
- * Implementers of this class template must implement `computeNewState` which must populate `Integrator::state_new` by
- * employing a time integration scheme, using as input `Integrator::state_old`. The `Integrator::FillPatch` may be used
- * to fill ghost cells of `MultiFab`s according to the boundary conditions supplied to `Integrator::model`.
+ * This class defines the common interface and lifecycle of a time integrator, independently of the particular
+ * integration scheme or the number of grid levels being managed. Derived implementations are responsible for
+ * initialising the simulation state and advancing it in time.
+ *
+ * The public `initialise()` and `step()` methods manage the overall execution protocol, including profiling,
+ * timestep counting, and simulation time. The actual initialisation and time integration procedures are delegated
+ * to the derived implementation through `initialise_impl()` and `step_impl()`, respectively.
+ *
+ * The optional `pre_step()` and `post_step()` hooks allow derived implementations to perform additional operations
+ * immediately before and after each timestep. These may, for example, be used for diagnostics, data export, or
+ * other operations associated with the timestep lifecycle.
  */
 template <typename PDEModelType>
     requires PDEModelConcept<PDEModelType>
@@ -51,11 +59,8 @@ class Integrator {
     /**
      * @brief Construct a new Integrator object.
      * @param model_ PDE model instance.
-     * @param block_size Block size for box array partition.
      */
-    Integrator(PDEModelType model_, const amrex::IntVect& block_size)
-        : model(std::move(model_)), ba(makeBoxArray(model.get_geometry(), block_size)), dm(ba),
-          state_old(ba, dm, ncomp, ngrow), state_new(ba, dm, ncomp, ngrow) {}
+    Integrator(PDEModelType model_) : model(std::move(model_)) {}
 
     /**
      * @brief Destroy the Integrator object.
@@ -63,121 +68,84 @@ class Integrator {
     virtual ~Integrator() = default;
 
     /**
-     * @brief Configure the plot file exporter.
-     * @param path Output directory path.
-     * @param export_interval Number of steps between exports.
-     */
-    void configureExporter(const fs::path& path, int export_interval) {
-        exporter.emplace(state_old, model.get_geometry(), model.get_comp_names(), path, export_interval);
-    }
-
-    /**
-     * @brief Initialize the state container using the initial condition functor.
+     * @brief Initialise the simulation state.
      *
-     * The `model.get_init()` functor is used to populate each cell of the `state_old` `amrex::MultiFab`.
+     * Delegates the initialisation procedure to `initialise_impl()` and measures its execution time.
      */
     void initialise() {
         ScopedTimer timer("Integrator::initialise()");
-        InitType init = model.get_init();
-        const amrex::Geometry& geom = model.get_geometry();
-        amrex::GpuArray<amrex::Real, 3> dx = geom.CellSizeArray();
-        amrex::GpuArray<amrex::Real, 3> lo = geom.ProbLoArray();
-
-        for (amrex::MFIter mfi(state_old); mfi.isValid(); ++mfi) {
-            amrex::Box box = mfi.validbox();
-            amrex::Array4<amrex::Real> arr = state_old.array(mfi);
-            amrex::ParallelFor(box, [=] AMREX_GPU_DEVICE(int i, int j, int k) {
-                amrex::Real x = lo[0] + (i + 0.5) * dx[0];
-                amrex::Real y = lo[1] + (j + 0.5) * dx[1];
-                amrex::Real z = lo[2] + (k + 0.5) * dx[2];
-
-                static_for<ncomp>(
-                    [=] AMREX_GPU_DEVICE<int comp>() { arr(i, j, k, comp) = init.template operator()<comp>(x, y, z); });
-            });
-        }
+        initialise_impl();
     }
 
     /**
-     * @brief Execute one time step.
+     * @brief Execute one timestep.
      *
-     * @note The timestep width passed to the inheriting class' implementation of `computeNewState()` is
-     * `model.dt_hint()`. For typical `Integrator` implementations such as `EulerIntegrator` and `RK4Integrator`, this
-     * is the width of the step that is actually taken; for adaptive timestepping schemes such as Dormand-Prince, the
-     * actual step width taken may differ from `model.dt_hint()`.
+     * Calls `pre_step()`, advances the simulation through `step_impl()`, updates the timestep counter and simulation
+     * time, and finally calls `post_step()`. The timestep width returned by `step_impl()` determines the amount by
+     * which the simulation time is advanced.
+     *
+     * @note The actual timestep width is determined by the derived implementation. For fixed-step schemes such as
+     * Euler and RK4, it will typically equal `model.dt_hint()`, whereas adaptive schemes may choose a different
+     * timestep width.
      */
     void step() {
-        if (exporter) {
-            exporter->exportIfNecessary(steps, time);
+        {
+            ScopedTimer timer("Integrator::step() [PRE]");
+            pre_step();
         }
-
-        ScopedTimer timer("Integrator::step()");
-        FillPatch(state_old, time);
-
-        amrex::Real delta_time = computeNewState(model.dt_hint());
-        std::swap(state_old, state_new);
-
-        steps++;
-        time += delta_time;
+        {
+            ScopedTimer timer("Integrator::step() [STEP]");
+            amrex::Real delta_time = step_impl();
+            steps++;
+            time += delta_time;
+        }
+        {
+            ScopedTimer timer("Integrator::step() [POST]");
+            post_step();
+        }
     }
 
   protected:
     /**
-     * @brief Compute the new state from the old state.
-     * @param dt_hint Suggested size of the time step.
-     * @return Size of the time step that was actually taken. May differ from dt_hint for integrators that dynamically
-     * scale timestep size.
-     * @note For typical `Integrator` implementations such as `EulerIntegrator` and `RK4Integrator`, `dt_hint`
-     * is the width of the step that is actually taken; for adaptive timestepping schemes such as Dormand-Prince, the
-     * actual step width taken may differ from `model.dt_hint()`.
-     */
-    virtual amrex::Real computeNewState(amrex::Real dt_hint) = 0;
-
-    /**
-     * @brief Fill internal and external boundaries.
-     * @param mf MultiFab to fill.
-     * @param time_ Current simulation time.
+     * @brief Initialise the simulation state.
      *
-     * This method internally calls `amrex::FillPatchSingleLevel` to fill internal boundaries by halo exchange and
-     * external boundaries using the boundary condition functor of the PDE model, `model.get_bc()`.
+     * Derived implementations must provide the initialisation procedure appropriate to their state representation
+     * and level structure. This typically involves evaluating the initial condition supplied by `model` and
+     * populating the corresponding state containers.
      */
-    void FillPatch(amrex::MultiFab& mf, amrex::Real time_) {
-        ScopedTimer timer("Integrator::FillPatch()");
-        amrex::Vector<amrex::MultiFab*> src{&mf};
-        amrex::Vector<amrex::Real> times{time_};
+    virtual void initialise_impl() = 0;
 
-        amrex::GpuBndryFuncFab<BCType> gpu_bndry_func(model.get_bc());
-        amrex::PhysBCFunct<amrex::GpuBndryFuncFab<BCType>> phys_bc(model.get_geometry(), model.get_bc_recs(),
-                                                                   gpu_bndry_func);
-
-        amrex::FillPatchSingleLevel(mf, time_, src, times, 0, 0, ncomp, model.get_geometry(), phys_bc, 0);
-    }
-
-  private:
     /**
-     * @brief Create a box array from the geometry and block size.
-     * @param geom Domain geometry.
-     * @param block_size Block size for partitioning.
-     * @return Generated box array.
+     * @brief Advance the simulation by one timestep.
+     * @return Actual timestep width used by the integration procedure.
+     *
+     * Derived implementations must provide the time integration procedure, advancing the simulation state according
+     * to their integration scheme. The returned timestep width is used by `step()` to update the simulation time.
      */
-    static amrex::BoxArray makeBoxArray(const amrex::Geometry& geom, const amrex::IntVect& block_size) {
-        amrex::BoxArray result(geom.Domain());
-        result.maxSize(block_size);
-        return result;
-    }
+    virtual amrex::Real step_impl() = 0;
+
+    /**
+     * @brief Perform operations immediately before each timestep.
+     *
+     * Optional hook for operations that should precede the time integration procedure, such as diagnostics or
+     * preparation of data required during the timestep. Derived implementations may override this method if needed.
+     */
+    virtual void pre_step() {}
+
+    /**
+     * @brief Perform operations immediately after each timestep.
+     *
+     * Optional hook for operations that should follow the time integration procedure, such as diagnostics or data
+     * export. At this point, the timestep counter and simulation time have already been updated. Derived
+     * implementations may override this method if needed.
+     */
+    virtual void post_step() {}
 
   protected:
     PDEModelType model; ///< PDE model instance.
 
-    amrex::BoxArray ba;            ///< Box array for domain partition.
-    amrex::DistributionMapping dm; ///< Distribution mapping for processes.
-
-    amrex::MultiFab state_old; ///< State at the current time step.
-    amrex::MultiFab state_new; ///< State at the new time step.
-
-    size_t steps = 0;       ///< Number of completed time steps, corresponds to `state_old`.
-    amrex::Real time = 0.0; ///< Current simulation time, corresponds to `state_old`.
-  private:
-    std::optional<PlotExporter> exporter = std::nullopt; ///< Exporter instance.
+    size_t steps = 0;       ///< Number of completed time steps.
+    amrex::Real time = 0.0; ///< Current simulation time.
 };
 
 } // namespace treesap

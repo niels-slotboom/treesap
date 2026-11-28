@@ -23,7 +23,7 @@ where \f$\Phi\f$ is the state vector and \f$t\f$ the time variable. Here, \f$F\f
 The library's core features comprise:
 - **PDE Model**: `C++20` concepts and classes which are used to represent (discretisations of) PDEs, such as `treesap::RHSConcept`, `treesap::BCConcept`, `treesap::InitConcept` and `treesap::PDEModel`;
 
-- **Time integrators**: An abstract base class/interface defined by `treesap::Integrator`, as well as concrete implementations `treesap::RK4Integrator` and `treesap::EulerIntegrator`;
+- **Time integrators**: An abstract base class/interface defined by `treesap::Integrator` and `treesap::SingleLevelIntegrator`, as well as concrete implementations `treesap::SingleLevelRK4Integrator` and `treesap::SingleLevelEulerIntegrator`;
 
 - **Statically Unrolled Derivative Stencils**: The `treesap::stencil` namespace implements centered first-, second- and third-order derivative stencils for arbitrary stencil widths, fully unrolled at compile time to remove call overhead while retatining readable code;
 

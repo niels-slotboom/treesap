@@ -3,12 +3,12 @@
 
 /**
  * @file
- * @brief Provides the concrete `treesap::RK4Integrator` implementation of `treesap::Integrator`.
+ * @brief Provides the concrete `treesap::SingleLevelRK4Integrator` implementation of `treesap::Integrator`.
  */
 
 #pragma once
 #include "AMReX_MFIter.H"
-#include "Integrator.hpp"
+#include "SingleLevelIntegrator.hpp"
 
 namespace treesap {
 
@@ -36,8 +36,8 @@ namespace treesap {
  */
 template <typename PDEModelType>
     requires PDEModelConcept<PDEModelType>
-class RK4Integrator : public Integrator<PDEModelType> {
-    using Base = Integrator<PDEModelType>;
+class SingleLevelRK4Integrator : public SingleLevelIntegrator<PDEModelType> {
+    using Base = SingleLevelIntegrator<PDEModelType>;
 
   private: // import base class members to scope
     using Base::ncomp;
@@ -62,7 +62,7 @@ class RK4Integrator : public Integrator<PDEModelType> {
      * @param model_ PDE model instance.
      * @param block_size Block size for box array partition.
      */
-    RK4Integrator(PDEModelType model_, const amrex::IntVect& block_size)
+    SingleLevelRK4Integrator(PDEModelType model_, const amrex::IntVect& block_size)
         : Base(std::move(model_), block_size), init(state_old), acc(state_new), arg(ba, dm, ncomp, ngrow),
           arg_next(ba, dm, ncomp, ngrow) {}
 
